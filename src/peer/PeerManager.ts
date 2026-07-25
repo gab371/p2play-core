@@ -1,4 +1,4 @@
-import Peer from "peerjs";
+import { Peer } from "peerjs";
 import type { DataConnection } from "peerjs";
 import type { PeerManagerLike } from "./PeerManagerLike";
 import type { ChatMessage, LobbyPlayer, NetworkMessage } from "./types";
@@ -144,10 +144,29 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       if (this.hostActionHandler && this.myPeerId) {
         this.hostActionHandler(this.myPeerId, { type, ...payload });
       }
-    } else if (this.hostPeerId) {
-      const conn = this.connections.get(this.hostPeerId);
-      if (conn?.open) conn.send({ type, ...payload });
+      return;
     }
+    if (!this.hostPeerId) return;
+    const conn = this.connections.get(this.hostPeerId);
+    if (conn?.open) {
+      conn.send({ type, ...payload });
+      return;
+    }
+    // Connection not ready yet — retry briefly (common right after initClient / hub embed).
+    const started = Date.now();
+    const trySend = () => {
+      const c = this.hostPeerId ? this.connections.get(this.hostPeerId) : undefined;
+      if (c?.open) {
+        c.send({ type, ...payload });
+        return;
+      }
+      if (Date.now() - started < 5000) {
+        window.setTimeout(trySend, 100);
+      } else {
+        console.warn("[p2play-core] sendToHost: no open connection to host", this.hostPeerId, type);
+      }
+    };
+    window.setTimeout(trySend, 50);
   }
 
   public broadcast(message: NetworkMessage, excludePeerId?: string): void {

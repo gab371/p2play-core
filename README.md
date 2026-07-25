@@ -7,9 +7,9 @@ Works **without the Hub**: create a room with `PeerManager` + `usePeer` in any V
 ## Install
 
 ```bash
-pnpm add p2play-core@github:gab371/p2play-core#v0.1.0
+pnpm add p2play-core@github:gab371/p2play-core#v0.1.1
 # or
-npm install github:gab371/p2play-core#v0.1.0
+npm install github:gab371/p2play-core#v0.1.1
 ```
 
 ## Quick start (standalone)
