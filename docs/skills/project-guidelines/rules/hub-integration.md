@@ -1,4 +1,4 @@
-﻿# Rule: Persistent Hub Integration (`hub-p2play`) & `p2play-core`
+# Rule: Persistent Hub Integration (`hub-p2play`) & `p2play-core`
 
 To allow any game to be mounted dynamically inside the unified `hub-p2play` (SPA without iFrames) while remaining 100% playable in standalone mode, every game's components and build configurations MUST use the unified **[`p2play-core`](https://github.com/gab371/p2play-core)** library and adhere to the following rules.
 
@@ -15,10 +15,10 @@ All games in the P2Play ecosystem MUST declare `p2play-core` dependency in `pack
 ```
 
 Reference Documentation:
-- ðŸ“– **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
-- ðŸ  **[Shared Lobby Guide (`P2PlayLobby`)](https://github.com/gab371/p2play-core/blob/main/docs/lobby-guide.md)**
-- ðŸ‘ï¸ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
-- ðŸŽ™ï¸ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
+- 📘 **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
+- 🏠 **[Shared Lobby Guide (`P2PlayLobby`)](https://github.com/gab371/p2play-core/blob/main/docs/lobby-guide.md)**
+- 👁️ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
+- 🎙️ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
 
 ---
 
@@ -37,7 +37,7 @@ import { readFileSync } from "fs"
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
-// Lib build: force a single React instance (Hub embed). Dual React â†’ useRef null.
+// Lib build: force a single React instance (Hub embed). Dual React → useRef null.
 const reactAliases = {
   react: path.resolve(__dirname, "node_modules/react"),
   "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
@@ -147,7 +147,7 @@ export function usePeer(options?: { externalPeerManager?: PeerManagerLike }) {
   return useCorePeer({
     externalPeerManager: options?.externalPeerManager,
     namespacePrefix: "royal", // Unique per game
-    sounds: { /* map sfx â†’ soundManager */ },
+    sounds: { /* map sfx → soundManager */ },
   });
 }
 ```
