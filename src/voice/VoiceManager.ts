@@ -57,6 +57,23 @@ export class VoiceManager {
     this.listeners.forEach((fn) => fn());
   }
 
+  public updateProfile(username?: string, avatar?: string): void {
+    if (username) this.username = username;
+    if (avatar) this.avatar = avatar;
+
+    const myId = this.peerManager.myPeerId;
+    if (myId) {
+      const state = this.participantStates.get(myId);
+      if (state) {
+        if (username) state.username = username;
+        if (avatar) state.avatar = avatar;
+        this.participantStates.set(myId, state);
+      }
+    }
+    this.broadcastState();
+    this.notify();
+  }
+
   public syncMembersFromPeerManager(): void {
     const pm = this.peerManager as any;
     const members = pm.members || pm.lobbyState?.members || pm.lobbyPlayers;
@@ -158,7 +175,14 @@ export class VoiceManager {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: false,
+      });
       this.localStream = stream;
       this.selfMuted = false;
       this.setupVAD(stream);
@@ -179,6 +203,26 @@ export class VoiceManager {
     this.applyMuteToTracks();
     this.broadcastState();
     this.notify();
+  }
+
+  public get active(): boolean {
+    return !!this.localStream;
+  }
+
+  public get isHost(): boolean {
+    return (this.peerManager as any)?.isHost ?? false;
+  }
+
+  public toggleMic(): void {
+    this.toggleSelfMute();
+  }
+
+  public isLocalMuted(targetPeerId: string): boolean {
+    return this.localMutes.has(targetPeerId);
+  }
+
+  public getLocalVolume(targetPeerId: string): number {
+    return this.localVolumes.get(targetPeerId) ?? 1.0;
   }
 
   public toggleSelfMute(): void {

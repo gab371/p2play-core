@@ -27,6 +27,7 @@ export function useVoiceChat({
 
   const managerRef = useRef<VoiceManager | null>(null);
 
+  // 1. Initialize VoiceManager instance ONLY when peerManager changes (prevents destroying stream on avatar/username updates)
   useEffect(() => {
     if (!peerManager) {
       if (managerRef.current) {
@@ -67,49 +68,34 @@ export function useVoiceChat({
       vm.destroy();
       managerRef.current = null;
     };
-  }, [peerManager, username, avatar, defaultMuted, autoStart]);
+  }, [peerManager]);
 
-  const toggleMic = () => {
-    manager?.toggleSelfMute();
-  };
-
-  const toggleDeafen = () => {
-    manager?.toggleDeafen();
-  };
-
-  const toggleLocalMute = (peerId: string) => {
-    manager?.toggleLocalMute(peerId);
-  };
-
-  const setLocalVolume = (peerId: string, volume: number) => {
-    manager?.setLocalVolume(peerId, volume);
-  };
-
-  const serverMute = (targetPeerId: string, mute: boolean) => {
-    manager?.serverMute(targetPeerId, mute);
-  };
-
-  const lockMute = (targetPeerId: string, lock: boolean) => {
-    manager?.lockMute(targetPeerId, lock);
-  };
+  // 2. Dynamic profile updates without destroying VoiceManager or resetting muted state
+  useEffect(() => {
+    if (managerRef.current && (username || avatar)) {
+      managerRef.current.updateProfile(username, avatar);
+    }
+  }, [username, avatar]);
 
   return {
-    voiceManager: manager,
-    active: !selfMuted,
+    manager,
+    active: manager?.active ?? false,
     participants,
     selfMuted,
     deafened,
     lockMuted,
     serverMuted,
-    isHost: peerManager?.isHost ?? false,
-    myPeerId: peerManager?.myPeerId,
-    toggleMic,
-    toggleDeafen,
-    toggleLocalMute,
-    setLocalVolume,
-    serverMute,
-    lockMute,
-    isLocalMuted: (peerId: string) => manager?.localMutes.has(peerId) ?? false,
-    getLocalVolume: (peerId: string) => manager?.localVolumes.get(peerId) ?? 1.0,
+    isHost: manager?.isHost ?? false,
+    myPeerId: peerManager?.myPeerId ?? null,
+    startMicrophone: () => managerRef.current?.startMicrophone(),
+    stopMicrophone: () => managerRef.current?.stopMicrophone(),
+    toggleMic: () => managerRef.current?.toggleMic(),
+    toggleDeafen: () => managerRef.current?.toggleDeafen(),
+    toggleLocalMute: (targetPeerId: string) => managerRef.current?.toggleLocalMute(targetPeerId),
+    setLocalVolume: (targetPeerId: string, volume: number) => managerRef.current?.setLocalVolume(targetPeerId, volume),
+    serverMute: (targetPeerId: string, muted: boolean) => managerRef.current?.serverMute(targetPeerId, muted),
+    lockMute: (targetPeerId: string, locked: boolean) => managerRef.current?.lockMute(targetPeerId, locked),
+    isLocalMuted: (targetPeerId: string) => managerRef.current?.isLocalMuted(targetPeerId) ?? false,
+    getLocalVolume: (targetPeerId: string) => managerRef.current?.getLocalVolume(targetPeerId) ?? 1.0,
   };
 }
