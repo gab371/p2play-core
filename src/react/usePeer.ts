@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PeerManager } from "../peer/PeerManager";
 import type { PeerManagerLike } from "../peer/PeerManagerLike";
 import type { ChatMessage, NetworkMessage } from "../peer/types";
-import { clearRoomUrlFromAddressBar, syncRoomUrlToAddressBar } from "../url";
+import { clearRoomUrlFromAddressBar, subscribeForeignRoomReload, syncRoomUrlToAddressBar } from "../url";
 
 export type PeerStatus = "IDLE" | "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 
@@ -49,6 +49,11 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
   }
 
   const peerManager = peerManagerRef.current;
+
+  useEffect(() => {
+    if (status !== "CONNECTED" && status !== "CONNECTING") return;
+    return subscribeForeignRoomReload(() => hostPeerId);
+  }, [status, hostPeerId]);
 
   useEffect(() => {
     peerManager.onStateReceived = (state: TState) => {

@@ -111,6 +111,8 @@ If the URL contains a room code (`#/ABCDE` or query helpers from `p2play-core/ur
 - Primary CTA: join that room
 - Secondary: clear code and return to create / manual join
 
+`P2PlayLobby` listens to `hashchange` / `popstate`, so editing the room hash in the same tab updates the invitation UI without a full reload. If you are already connected to another room, `usePeer` / Hub reload the page so PeerJS can join the new code cleanly.
+
 Theme + `classes.urlNotice` must match the game brand (avoid leaving default violet on an amber game).
 
 ### Address-bar sync

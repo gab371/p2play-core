@@ -154,3 +154,56 @@ export function clearRoomUrlFromAddressBar(options: RoomUrlOptions = {}): void {
     window.history.replaceState(null, "", url.toString());
   }
 }
+
+/**
+ * Subscribes to browser navigations that can change the room code in the URL
+ * (hash edits in the address bar, back/forward).
+ *
+ * `history.replaceState` used by sync/clear does not fire hashchange/popstate;
+ * we still detect those URL updates via a light hash/search poll so address-bar
+ * edits are never missed.
+ */
+export function subscribeRoomUrlChanges(onChange: (code: string | null) => void): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  let lastKey = `${window.location.search}\0${window.location.hash}`;
+
+  const notifyIfChanged = () => {
+    const key = `${window.location.search}\0${window.location.hash}`;
+    if (key === lastKey) return;
+    lastKey = key;
+    onChange(extractRoomCodeFromUrl());
+  };
+
+  window.addEventListener("hashchange", notifyIfChanged);
+  window.addEventListener("popstate", notifyIfChanged);
+  window.addEventListener("focus", notifyIfChanged);
+  document.addEventListener("visibilitychange", notifyIfChanged);
+  // Address-bar fragment edits are same-document navigations; some cases only
+  // update location without a reliable event ordering for React listeners.
+  const intervalId = window.setInterval(notifyIfChanged, 400);
+
+  return () => {
+    window.removeEventListener("hashchange", notifyIfChanged);
+    window.removeEventListener("popstate", notifyIfChanged);
+    window.removeEventListener("focus", notifyIfChanged);
+    document.removeEventListener("visibilitychange", notifyIfChanged);
+    window.clearInterval(intervalId);
+  };
+}
+
+/**
+ * When the address bar points at a different room than the active PeerJS session,
+ * reload so the app boots cleanly into the new invitation (hash navigation does
+ * not remount React by itself).
+ */
+export function subscribeForeignRoomReload(getActiveRoomId: () => string | null | undefined): () => void {
+  return subscribeRoomUrlChanges((code) => {
+    if (!code) return;
+    const active = getActiveRoomId()?.trim().toUpperCase();
+    if (!active) return;
+    if (code !== active) {
+      window.location.reload();
+    }
+  });
+}

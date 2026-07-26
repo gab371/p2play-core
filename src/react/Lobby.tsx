@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl } from "../url";
+import React, { useState, useEffect, useRef } from "react";
+import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl, subscribeRoomUrlChanges } from "../url";
 
 export interface P2PlayLobbyTheme {
   primaryColor: string;
@@ -197,13 +197,25 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState(() => extractRoomCodeFromUrl() || "");
   const [enableVoice, setEnableVoice] = useState(true);
+  const urlInvitationRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const code = extractRoomCodeFromUrl();
-    if (code) {
-      setDetectedCode(code);
-      setJoinCode(code);
-    }
+    const syncFromUrl = (code: string | null) => {
+      if (code) {
+        urlInvitationRef.current = code;
+        setDetectedCode(code);
+        setJoinCode(code);
+        return;
+      }
+      if (urlInvitationRef.current) {
+        urlInvitationRef.current = null;
+        setDetectedCode(null);
+        setJoinCode("");
+      }
+    };
+
+    syncFromUrl(extractRoomCodeFromUrl());
+    return subscribeRoomUrlChanges(syncFromUrl);
   }, []);
 
   const activeTheme: P2PlayLobbyTheme = typeof theme === "string" ? LOBBY_THEMES[theme] || LOBBY_THEMES.violet : theme;
@@ -238,6 +250,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   };
 
   const handleClearUrlCode = () => {
+    urlInvitationRef.current = null;
     setDetectedCode(null);
     setJoinCode("");
     clearRoomUrlFromAddressBar();
