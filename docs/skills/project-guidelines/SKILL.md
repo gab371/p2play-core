@@ -30,10 +30,10 @@ For technology-specific standards and shared capabilities, this skill references
   - [Hub Architecture](https://github.com/gab371/hub-p2play/blob/main/docs/architecture.md)
   - [Game Mount Contract](https://github.com/gab371/hub-p2play/blob/main/docs/game-mount-contract.md)
   - [Developer Guide for New Games](https://github.com/gab371/hub-p2play/blob/main/docs/developer-guide-new-game.md)
-- **React & Next.js Best Practices**: [react-best-practices](../react-best-practices/SKILL.md)
-- **React Component Composition**: [composition-patterns](../composition-patterns/SKILL.md)
-- **UI Components & Shadcn**: [shadcn](../shadcn/SKILL.md)
-- **Aesthetic & Design Guidelines**: [web-design-guidelines](../web-design-guidelines/SKILL.md)
+- **React & Next.js Best Practices**: [react-best-practices](https://github.com/vercel-labs/agent-skills/blob/main/skills/react-best-practices/SKILL.md)
+- **React Component Composition**: [composition-patterns](https://github.com/vercel-labs/agent-skills/blob/main/skills/composition-patterns/SKILL.md)
+- **UI Components & Shadcn**: [shadcn](https://github.com/shadcn-ui/ui/blob/main/skills/shadcn/SKILL.md)
+- **Aesthetic & Design Guidelines**: [web-design-guidelines](https://github.com/vercel-labs/agent-skills/blob/main/skills/web-design-guidelines/SKILL.md)
 
 ---
 
