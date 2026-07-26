@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "spectator/index": "src/spectator/index.ts",
+    "voice/index": "src/voice/index.ts",
   },
   format: ["esm"],
   dts: true,

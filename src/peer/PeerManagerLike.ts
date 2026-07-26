@@ -19,6 +19,10 @@ export interface PeerManagerLike<TState = unknown> {
   hostActionHandler: ((peerId: string, actionMsg: NetworkMessage) => void) | null;
   /** Non-core message types received on the client (e.g. SHOT_FRAME). */
   onCustomMessage?: ((msg: NetworkMessage) => void) | null;
+  /** Voice signaling callback. */
+  onVoiceMessage?: ((msg: NetworkMessage) => void) | null;
+
+  getPeer?(): any;
 
   sendToHost(type: string, payload: Record<string, unknown>): void;
   broadcast(message: NetworkMessage, excludePeerId?: string): void;

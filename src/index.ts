@@ -3,6 +3,9 @@ export type {
   ChatMessage,
   AudioEventMessage,
   StateUpdateMessage,
+  VoiceParticipantState,
+  VoiceStateUpdateMessage,
+  VoiceModerationActionMessage,
   NetworkMessage,
   LobbyPlayer,
 } from "./peer/types";
@@ -11,3 +14,5 @@ export { PeerManager } from "./peer/PeerManager";
 export type { PeerManagerOptions } from "./peer/PeerManager";
 export { usePeer } from "./react/usePeer";
 export type { UsePeerOptions, PeerStatus } from "./react/usePeer";
+export * from "./voice";
+

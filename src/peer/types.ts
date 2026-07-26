@@ -1,4 +1,9 @@
-export type CoreMessageType = "STATE_UPDATE" | "CHAT" | "AUDIO_EVENT";
+export type CoreMessageType =
+  | "STATE_UPDATE"
+  | "CHAT"
+  | "AUDIO_EVENT"
+  | "VOICE_STATE_UPDATE"
+  | "VOICE_MODERATION_ACTION";
 
 export interface ChatMessage {
   type: "CHAT";
@@ -18,11 +23,36 @@ export interface StateUpdateMessage<TState = unknown> {
   state: TState;
 }
 
+export interface VoiceParticipantState {
+  peerId: string;
+  username?: string;
+  avatar?: string;
+  selfMuted: boolean;
+  deafened: boolean;
+  serverMuted: boolean;
+  lockMuted: boolean;
+  isSpeaking: boolean;
+}
+
+export interface VoiceStateUpdateMessage {
+  type: "VOICE_STATE_UPDATE";
+  sender: string;
+  voiceState: VoiceParticipantState;
+}
+
+export interface VoiceModerationActionMessage {
+  type: "VOICE_MODERATION_ACTION";
+  targetPeerId: string;
+  action: "SERVER_MUTE" | "SERVER_UNMUTE" | "LOCK_MUTE" | "LOCK_UNMUTE";
+}
+
 /** Generic envelope; game-specific ActionTypes stay in each game. */
 export type NetworkMessage =
   | ChatMessage
   | AudioEventMessage
   | StateUpdateMessage<unknown>
+  | VoiceStateUpdateMessage
+  | VoiceModerationActionMessage
   | { type: string; [key: string]: unknown };
 
 export interface LobbyPlayer {
@@ -30,3 +60,4 @@ export interface LobbyPlayer {
   username: string;
   avatar: string;
 }
+

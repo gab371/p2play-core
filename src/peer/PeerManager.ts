@@ -9,6 +9,16 @@ export interface PeerManagerOptions {
   peerjsDebug?: 0 | 1 | 2 | 3;
 }
 
+const DEFAULT_RTC_CONFIG = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+  ],
+};
+
 export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   public peer: Peer | null = null;
   public connections: Map<string, DataConnection> = new Map();
@@ -24,6 +34,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     null;
   public hostActionHandler: ((peerId: string, actionMsg: NetworkMessage) => void) | null = null;
   public onCustomMessage: ((msg: NetworkMessage) => void) | null = null;
+  public onVoiceMessage: ((msg: NetworkMessage) => void) | null = null;
 
   private readonly namespacePrefix: string;
   private readonly peerjsDebug: 0 | 1 | 2 | 3;
@@ -31,6 +42,10 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   constructor(options: PeerManagerOptions) {
     this.namespacePrefix = options.namespacePrefix;
     this.peerjsDebug = options.peerjsDebug ?? 1;
+  }
+
+  public getPeer(): Peer | null {
+    return this.peer;
   }
 
   public generateRoomId(): string {
@@ -54,7 +69,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       this.hostPeerId = roomId;
 
       const namespacedRoomId = this.namespaceId(roomId);
-      this.peer = new Peer(namespacedRoomId, { debug: this.peerjsDebug });
+      this.peer = new Peer(namespacedRoomId, { debug: this.peerjsDebug, config: DEFAULT_RTC_CONFIG });
       this.peer.on("open", () => {
         this.myPeerId = roomId;
         this.hostPeerId = roomId;
@@ -70,7 +85,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       this.isHost = false;
       this.hostPeerId = hostRoomId;
 
-      this.peer = new Peer({ debug: this.peerjsDebug });
+      this.peer = new Peer({ debug: this.peerjsDebug, config: DEFAULT_RTC_CONFIG });
       this.peer.on("open", (id) => {
         this.myPeerId = id;
         if (!this.peer) return reject(new Error("Peer not initialized"));
@@ -83,8 +98,17 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         });
         conn.on("error", (err) => reject(err));
       });
+      this.peer.on("connection", (conn) => this.handleClientIncomingConnection(conn));
       this.peer.on("error", (err) => reject(err));
     });
+  }
+
+  private handleClientIncomingConnection(conn: DataConnection): void {
+    conn.on("open", () => {
+      this.connections.set(conn.peer, conn);
+      this.onPeerStatusChange?.(conn.peer, "CONNECTED");
+    });
+    this.setupClientConnectionListeners(conn);
   }
 
   private handleHostIncomingConnection(conn: DataConnection): void {
@@ -103,6 +127,9 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         this.broadcast(msg);
         const audio = msg as { sfx?: string; intensity?: number };
         if (audio.sfx) this.onAudioReceived?.(audio.sfx, audio.intensity);
+      } else if (msg.type === "VOICE_STATE_UPDATE" || msg.type === "VOICE_MODERATION_ACTION") {
+        this.broadcast(msg, conn.peer);
+        this.onVoiceMessage?.(msg);
       } else {
         this.hostActionHandler?.(conn.peer, msg);
       }
@@ -132,10 +159,29 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
           if (audio.sfx) this.onAudioReceived?.(audio.sfx, audio.intensity);
           break;
         }
+        case "VOICE_STATE_UPDATE": {
+          this.onVoiceMessage?.(msg);
+          const update = msg as { voiceState?: { peerId?: string } };
+          const peerId = update.voiceState?.peerId;
+          if (!this.isHost && peerId && peerId !== this.myPeerId && !this.connections.has(peerId)) {
+            const peerConn = this.peer?.connect(peerId, { reliable: true });
+            if (peerConn) {
+              this.handleClientIncomingConnection(peerConn);
+            }
+          }
+          break;
+        }
+        case "VOICE_MODERATION_ACTION":
+          this.onVoiceMessage?.(msg);
+          break;
         default:
           this.onCustomMessage?.(msg);
           break;
       }
+    });
+    conn.on("close", () => {
+      this.connections.delete(conn.peer);
+      this.onPeerStatusChange?.(conn.peer, "DISCONNECTED");
     });
   }
 
