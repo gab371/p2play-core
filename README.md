@@ -205,10 +205,11 @@ export function GameWithVoice() {
 
 ## ðŸ“š Documentation Links
 
-- ðŸ“– **[API Reference](docs/api-reference.md)**: Complete reference of all hooks, types, and classes.
+- ðŸ“– **[API Reference](docs/api-reference.md)**: Complete reference (`usePeer`, lobby, Hub manifest, spectator, voice).
 - ðŸ  **[Shared Lobby Guide](docs/lobby-guide.md)**: `P2PlayLobby` themes, classes, and URL invitations.
 - ðŸ‘ï¸ **[Spectator Mode Guide](docs/spectator-guide.md)**: Role management and state sanitization.
 - ðŸŽ™ï¸ **[Voice Chat Guide](docs/voice-chat-guide.md)**: WebRTC P2P mesh topology and spatial audio.
+
 
 ---
 

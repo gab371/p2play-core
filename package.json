@@ -1,6 +1,6 @@
 {
   "name": "p2play-core",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Standalone-first P2P toolkit for P2Play games (PeerJS transport, usePeer, optional spectator)",
   "repository": {
     "type": "git",

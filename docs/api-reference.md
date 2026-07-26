@@ -9,7 +9,7 @@ This document provides a comprehensive reference for the `p2play-core` package, 
 `p2play-core` provides 4 modular entry points:
 
 ```ts
-import { PeerManager, usePeer, P2PlayLobby, LOBBY_THEMES } from 'p2play-core';
+import { PeerManager, usePeer, P2PlayLobby, LOBBY_THEMES, defineHubGameManifest } from 'p2play-core';
 import { useSpectatorRole, isSpectator } from 'p2play-core/spectator';
 import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
 import { copyRoomUrlToClipboard, extractRoomCodeFromUrl } from 'p2play-core/url';
@@ -114,6 +114,41 @@ import { P2PlayLobby } from 'p2play-core';
 | `onCreateRoom` / `onJoinRoom` | callbacks | Alternate API with generated room code on create. |
 
 📘 See **[Shared Lobby Guide](lobby-guide.md)** for theming and Hub vs game patterns.
+
+---
+
+## 🗂️ Hub Game Manifest
+
+Games declare themselves to the Hub picker via `public/hub-manifest.json` (copied into `dist` / `dist.zip` by Vite). Hub's `download-games.js` aggregates these into `public/games/catalog.json`. Hub `games.json` only pins GitHub `repo` + `version`.
+
+### `defineHubGameManifest(manifest)`
+Validates and returns a `HubGameManifest`.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `key` | `string` | ✅ | Must match Hub `games.json` key and `public/games/{key}/`. |
+| `name` | `string` | ✅ | Display name (emoji separate). |
+| `desc` | `string` | ✅ | Short pitch for the picker card. |
+| `hasPreConfig` | `boolean` | ✅ | Hub launches `GAME_CONFIG` vs `GAME_RUNNING`. |
+| `emoji` | `string` | | Optional emoji prefix for the label. |
+| `mountFn` | `string` | | Optional `window` mount name; default `mount{Key}`. |
+
+### Helpers
+- `HUB_GAME_MANIFEST_FILENAME` — `"hub-manifest.json"`
+- `defaultHubMountFnName(key)` — e.g. `skull` → `mountSkull`
+- `formatHubGameLabel(manifest)` — `"💀 Skull & Roses"`
+
+```ts
+import { defineHubGameManifest } from 'p2play-core';
+
+export const hubManifest = defineHubGameManifest({
+  key: 'skull',
+  name: 'Skull & Roses',
+  emoji: '💀',
+  desc: 'Mises, Bluff & Roses.',
+  hasPreConfig: true,
+});
+```
 
 ---
 
