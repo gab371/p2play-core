@@ -202,3 +202,29 @@ In embedded mode, WebRTC connection belongs to Hub (`externalPeerManager`). Sub-
 For games requiring voice chat or spectator features:
 - **Voice Chat**: Use `useVoiceChat`, `<VoiceChatPanel />`, and `<VoiceBubble />` from `p2play-core/voice`.
 - **Spectator Mode**: Use `useSpectatorRole` and `sanitizeForViewer` from `p2play-core/spectator`.
+
+---
+
+## 9. Hub Catalog Declaration (`hub-manifest.json`)
+
+Games **self-declare** picker metadata. Do **not** put `name` / `desc` in Hub `games.json`.
+
+1. Ship `public/hub-manifest.json` (Vite copies it into `dist`):
+
+```json
+{
+  "key": "mygame",
+  "name": "My Game",
+  "emoji": "🎮",
+  "desc": "Short pitch for the Hub picker.",
+  "hasPreConfig": true,
+  "avatars": ["🎮", "🎯", "🎲"],
+  "shellBackground": "radial-gradient(circle at center, #1b0a0f 0%, #09090b 100%)"
+}
+```
+
+2. Optionally validate with `defineHubGameManifest` from `p2play-core`.
+3. Hub `games.json` only pins download: `{ "repo": "...", "version": "vX.Y.Z" }`.
+4. `download-games.js` validates the manifest, writes `public/games/catalog.json`, and prunes orphan game folders. Local monorepo: `npm run catalog` (`--catalog-only`) refreshes catalog without re-download.
+
+Do **not** hardcode per-game avatars, labels, or shell backgrounds in Hub — those belong in `hub-manifest.json`.

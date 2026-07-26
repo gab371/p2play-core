@@ -132,6 +132,8 @@ Validates and returns a `HubGameManifest`.
 | `hasPreConfig` | `boolean` | ✅ | Hub launches `GAME_CONFIG` vs `GAME_RUNNING`. |
 | `emoji` | `string` | | Optional emoji prefix for the label. |
 | `mountFn` | `string` | | Optional `window` mount name; default `mount{Key}`. |
+| `avatars` | `string[]` | | Game emotes for Hub AvatarSelector (“Émotes du Jeu”). |
+| `shellBackground` | `string` | | CSS background for Hub mount shell (avoid white flash). |
 
 ### Helpers
 - `HUB_GAME_MANIFEST_FILENAME` — `"hub-manifest.json"`
@@ -147,6 +149,8 @@ export const hubManifest = defineHubGameManifest({
   emoji: '💀',
   desc: 'Mises, Bluff & Roses.',
   hasPreConfig: true,
+  avatars: ['💀', '🌹', '🦊'],
+  shellBackground: 'radial-gradient(circle at center, #1b0a0f 0%, #09090b 100%)',
 });
 ```
 

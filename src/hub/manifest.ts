@@ -12,6 +12,13 @@ export interface HubGameManifest {
    * Default: `mount` + capitalized key (e.g. skull → mountSkull).
    */
   mountFn?: string;
+  /** Game-specific player emotes shown in Hub AvatarSelector (“Émotes du Jeu”). */
+  avatars?: string[];
+  /**
+   * CSS background for Hub mount shell while the game loads
+   * (avoids white flash; usually matches the game's body gradient).
+   */
+  shellBackground?: string;
 }
 
 /** Filename each game must ship in its dist / dist.zip for Hub discovery. */
@@ -34,6 +41,14 @@ export function defineHubGameManifest(manifest: HubGameManifest): HubGameManifes
   if (typeof manifest.hasPreConfig !== "boolean") {
     throw new Error("defineHubGameManifest: hasPreConfig must be a boolean");
   }
+  if (manifest.avatars !== undefined) {
+    if (!Array.isArray(manifest.avatars) || !manifest.avatars.every((a) => typeof a === "string" && a.trim())) {
+      throw new Error("defineHubGameManifest: avatars must be a non-empty string array when set");
+    }
+  }
+
+  const avatars = manifest.avatars?.map((a) => a.trim()).filter(Boolean);
+
   return {
     key: manifest.key.trim(),
     name: manifest.name.trim(),
@@ -41,6 +56,8 @@ export function defineHubGameManifest(manifest: HubGameManifest): HubGameManifes
     desc: manifest.desc.trim(),
     hasPreConfig: manifest.hasPreConfig,
     mountFn: manifest.mountFn?.trim() || undefined,
+    avatars: avatars?.length ? avatars : undefined,
+    shellBackground: manifest.shellBackground?.trim() || undefined,
   };
 }
 
