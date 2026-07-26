@@ -1,4 +1,4 @@
-name: CI
+name: CI & Auto Release Tag
 
 on:
   push:
@@ -9,11 +9,41 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci || npm install
-      - run: npm run typecheck
-      - run: npm run build
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Auto Tag & Release on Version Bump
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          git fetch --tags
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG does not exist. Creating and pushing..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          else
+            echo "Tag $TAG already exists on remote."
+          fi
+        shell: bash
