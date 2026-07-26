@@ -1,6 +1,6 @@
 # Rule: Intégration au Hub P2Play (hub-p2play) & `p2play-core`
 
-Pour que n'importe quel jeu puisse être intégré dynamiquement au sein du hub unifié `hub-p2play` (en SPA sans iFrame) tout en restant utilisable à 100% de manière autonome en standalone, les composants et configurations de chaque jeu doivent obligatoirement utiliser la bibliothèque unifiée **[`p2play-core`](file:///g:/prj/sherif/p2play-core/README.md)** et respecter les règles suivantes.
+Pour que n'importe quel jeu puisse être intégré dynamiquement au sein du hub unifié `hub-p2play` (en SPA sans iFrame) tout en restant utilisable à 100% de manière autonome en standalone, les composants et configurations de chaque jeu doivent obligatoirement utiliser la bibliothèque unifiée **[`p2play-core`](https://github.com/gab371/p2play-core)** et respecter les règles suivantes.
 
 ---
 
@@ -15,9 +15,9 @@ Tous les sous-jeux de l'écosystème P2Play doivent déclarer la dépendance `p2
 ```
 
 Documentation de référence du package :
-- 📖 **[Référence de l'API `p2play-core`](file:///g:/prj/sherif/p2play-core/docs/api-reference.md)**
-- 👁️ **[Guide Spectateur (`p2play-core/spectator`)](file:///g:/prj/sherif/p2play-core/docs/spectator-guide.md)**
-- 🎙️ **[Guide Chat Vocal (`p2play-core/voice`)](file:///g:/prj/sherif/p2play-core/docs/voice-chat-guide.md)**
+- 📖 **[Référence de l'API `p2play-core`](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
+- 👁️ **[Guide Spectateur (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
+- 🎙️ **[Guide Chat Vocal (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
 
 ---
 
