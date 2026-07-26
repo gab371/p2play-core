@@ -132,6 +132,10 @@ export interface P2PlayLobbyProps {
   joinButtonText?: string;
   compactHostSection?: boolean;
   joinLayout?: 'stacked' | 'side-by-side';
+  /** When true, the header emoji follows the currently selected avatar. */
+  bannerFollowsAvatar?: boolean;
+  /** Default: uppercase. Use "none" to keep subtitle casing as provided. */
+  subtitleTransform?: 'uppercase' | 'none';
 
   // MUI / Shadcn Style Customization
   classes?: P2PlayLobbyClasses;
@@ -175,6 +179,8 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   joinButtonText = "Rejoindre un salon",
   compactHostSection = false,
   joinLayout = "stacked",
+  bannerFollowsAvatar = false,
+  subtitleTransform = "uppercase",
   classes = {},
   onCreateRoom,
   onJoinRoom,
@@ -185,8 +191,9 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   className = "",
   style = {},
 }) => {
-  const [username, setUsername] = useState(() => defaultUsername || `Joueur_${Math.floor(Math.random() * 1000)}`);
+  const [username, setUsername] = useState(() => defaultUsername ?? `Joueur_${Math.floor(Math.random() * 1000)}`);
   const [selectedAvatar, setSelectedAvatar] = useState(() => defaultAvatar || avatars[0] || "👑");
+  const displayBannerEmoji = bannerFollowsAvatar ? selectedAvatar : bannerEmoji;
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState(() => extractRoomCodeFromUrl() || "");
   const [enableVoice, setEnableVoice] = useState(true);
@@ -275,7 +282,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
           className={classes.emoji || "animate-bounce"}
           style={!classes.emoji ? { fontSize: "48px", display: "inline-block", marginBottom: "12px" } : {}}
         >
-          {bannerEmoji}
+          {displayBannerEmoji}
         </span>
         <h1
           className={classes.title}
@@ -305,8 +312,8 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                 ? {
                     color: activeTheme.subTextColor,
                     fontSize: "12px",
-                    textTransform: "uppercase",
-                    letterSpacing: "1.2px",
+                    textTransform: subtitleTransform,
+                    letterSpacing: subtitleTransform === "uppercase" ? "1.2px" : "normal",
                     margin: "8px 0 0 0",
                     fontWeight: 600,
                     fontFamily: activeTheme.fontFamily || "inherit",
@@ -516,7 +523,19 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
             }
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: activeTheme.badgeText,
+                  fontFamily: activeTheme.fontFamily || "inherit",
+                }}
+              >
                 <span>🔗</span> Invitation au Salon
               </span>
               <span
@@ -536,7 +555,15 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               </span>
             </div>
 
-            <p style={{ fontSize: "12px", color: activeTheme.subTextColor, lineHeight: "1.5", margin: 0 }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: activeTheme.subTextColor,
+                lineHeight: "1.5",
+                margin: 0,
+                fontFamily: activeTheme.fontFamily || "inherit",
+              }}
+            >
               Vous avez été invité à rejoindre ce salon. Choisissez votre pseudo et votre avatar ci-dessus puis rejoignez la partie !
             </p>
 
@@ -576,6 +603,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                 cursor: "pointer",
                 textAlign: "center",
                 padding: "4px",
+                fontFamily: activeTheme.fontFamily || "inherit",
               }}
             >
               ← Créer un salon ou entrer un autre code
