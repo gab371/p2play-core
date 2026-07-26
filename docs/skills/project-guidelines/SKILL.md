@@ -57,9 +57,9 @@ Read the detailed rule markdown files for concrete examples and instructions:
    - [rules/pre-game-config.md](./rules/pre-game-config.md)
    - Reusable pattern for selectable decks/extensions and gameplay helper toggles (`GameConfig` on `GameState`, host-only `CHANGE_CONFIG`, lobby config panel).
 
-5. **Intégration au Hub Persistant & `p2play-core` (hub-p2play)**
+5. **Persistent Hub Integration & `p2play-core` (`hub-p2play`)**
    - [rules/hub-integration.md](./rules/hub-integration.md)
-   - Règles d'abstraction réseau avec `p2play-core`, contrat de montage `window.mountXxx`, builds doubles (standalone/lib), chat vocal (`p2play-core/voice`), mode spectateur (`p2play-core/spectator`), bypass direct des lobbies et polyfill `process.env`.
+   - Network abstraction rules with `p2play-core`, global mount contract `window.mountXxx`, dual build modes (standalone/lib), voice chat (`p2play-core/voice`), spectator mode (`p2play-core/spectator`), direct lobby bypass, and `process.env` polyfill.
 
 ---
 
@@ -74,4 +74,4 @@ Read the detailed rule markdown files for concrete examples and instructions:
 - **Hardcoding Deployment Base Path**: Never hardcode base paths in code or vite config; use relative bases (`base: './'`) to allow hosting on subfolders of GitHub and GitLab Pages.
 - **Placing `define` inside `build` in `vite.config.ts`**: `define` must be placed at the root of the Vite configuration object, not nested inside `build`.
 - **Auto-starting an embedded game that has pre-game configuration**: In embedded mode, populate players from `peerManager.lobbyPlayers` but stay in `LOBBY` phase — never call `engine.startGame()` automatically if the game exposes a pre-game config lobby. See [rules/hub-integration.md §4](./rules/hub-integration.md).
-- **Destroying the Hub's PeerJS connection from an embedded sub-game**: In embedded mode, the PeerJS connection is owned by the Hub's `externalPeerManager`. "Quitter le saloon" / exit buttons must call `onExit` (return to Hub), never `game.disconnect` / `peerManager.disconnect`. See [rules/hub-integration.md §4.1](./rules/hub-integration.md).
+- **Destroying the Hub's PeerJS connection from an embedded sub-game**: In embedded mode, the PeerJS connection is owned by the Hub's `externalPeerManager`. Exit buttons must call `onExit` (return to Hub), never `game.disconnect` / `peerManager.disconnect`. See [rules/hub-integration.md §4.1](./rules/hub-integration.md).

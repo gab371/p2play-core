@@ -1,26 +1,26 @@
-# 🎙️ Guide du Chat Vocal WebRTC P2P (`p2play-core/voice`)
+# 🎙️ WebRTC P2P Voice Chat Guide (`p2play-core/voice`)
 
-`p2play-core` intègre une solution de chat vocal P2P sans serveur central, fonctionnant via un maillage dynamique de connexions audio WebRTC entre les pairs.
-
----
-
-## 🏗️ Architecture Reseau Vocal
-
-- **Zero-Server Audio Mesh** : Chaque joueur transmet son flux microphone aux autres pairs via l'instance PeerJS sous-jacente.
-- **Synchronisation d'État Vocal** : Les indicateurs d'activité vocale (`isSpeaking`), les états muet/sourdine (`isMuted`, `isDeafened`) et les coordonnées spatiales sont synchronisés via des messages `VOICE_STATE_UPDATE`.
-- **Modération par l'Hôte** : L'hôte peut envoyer des messages `VOICE_MODERATION_ACTION` (ex: mute forcé).
+`p2play-core` provides a serverless P2P voice chat solution operating over a dynamic mesh of WebRTC audio calls between peers.
 
 ---
 
-## 🚀 Utilisation dans une Application React
+## 🏗️ Voice Network Architecture
 
-### 1. Importation du Module Vocal
+- **Zero-Server Audio Mesh**: Each player streams their microphone audio directly to connected peers via the underlying PeerJS instance.
+- **Voice State Sync**: Mute/deafen toggles (`isMuted`, `isDeafened`), voice activity indicators (`isSpeaking`), and spatial coordinates are synchronized via `VOICE_STATE_UPDATE` packets.
+- **Host Moderation**: Host can issue `VOICE_MODERATION_ACTION` packets (e.g., force mute).
+
+---
+
+## 🚀 React Application Usage
+
+### 1. Import Voice Module
 
 ```ts
 import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
 ```
 
-### 2. Intégration du Hook `useVoiceChat`
+### 2. Use `useVoiceChat` Hook
 
 ```tsx
 import { usePeer } from 'p2play-core';
@@ -39,7 +39,7 @@ export function GameWithVoice() {
 
   return (
     <div className="game-container">
-      {/* Panneau de contrôle du chat vocal */}
+      {/* Voice Control Panel */}
       <VoiceChatPanel
         voice={voice}
         isHost={isHost}
@@ -52,23 +52,23 @@ export function GameWithVoice() {
 
 ---
 
-## 🎧 Audio Spatialisé 2D / 3D
+## 🎧 2D / 3D Spatial Audio
 
-`VoiceManager` intègre la Web Audio API pour positionner les voix des joueurs dans l'espace en fonction de leur position sur le plateau de jeu.
+`VoiceManager` integrates the Web Audio API to position player voices in virtual space based on their game board coordinates.
 
-### Mise à jour de la position spatiale
+### Updating Spatial Position
 ```ts
-// Définir la position du joueur local (x, y, z)
+// Set local player spatial position (x, y, z)
 voice.setSpatialPosition(playerX, playerY, 0);
 ```
 
-Le son s'atténue automatiquement selon la distance entre le joueur local et ses adversaires.
+Audio volume attenuates naturally with distance between players.
 
 ---
 
-## 👤 Indicateurs Visuels Vocaux (`<VoiceBubble />`)
+## 👤 Voice Indicator Visuals (`<VoiceBubble />`)
 
-Pour afficher la bulle d'activité vocale (ex: contour vert animé quand le joueur parle) au-dessus de l'avatar :
+Render active speaking indicators (e.g. green animated ring when talking) over player avatars:
 
 ```tsx
 import { VoiceBubble } from 'p2play-core/voice';

@@ -1,12 +1,12 @@
-# 📖 Référence de l'API `p2play-core`
+# 📖 `p2play-core` API Reference
 
-Ce document présente la référence complète de l'API du package `p2play-core`, incluant le module réseau principal, le module spectateur et le module chat vocal WebRTC.
+This document provides a comprehensive reference for the `p2play-core` package, including core P2P networking, the Spectator module, and WebRTC Voice Chat.
 
 ---
 
-## 📦 Points d'Entrée (Exports ESM)
+## 📦 Entry Points (ESM Exports)
 
-`p2play-core` propose 3 points d'entrée modulaires :
+`p2play-core` provides 3 modular entry points:
 
 ```ts
 import { PeerManager, usePeer, PeerManagerLike } from 'p2play-core';
@@ -16,48 +16,48 @@ import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
 
 ---
 
-## 🌐 Module Principal (`p2play-core`)
+## 🌐 Core Module (`p2play-core`)
 
-### 1. Hook `usePeer<TState>(options?: UsePeerOptions<TState>)`
+### 1. `usePeer<TState>(options?: UsePeerOptions<TState>)` Hook
 
-Le hook React principal pour gérer le réseau P2P dans vos composants.
+The primary React hook for managing P2P connections in your components.
 
 #### Options (`UsePeerOptions<TState>`)
 | Option | Type | Description |
 | :--- | :--- | :--- |
-| `externalPeerManager` | `PeerManagerLike<TState>` | Instance `PeerManager` transmise par le Hub (mode embarqué). |
-| `namespacePrefix` | `string` | **Requis sans `externalPeerManager`**. Préfixe pour isoler les salons (ex: `"royal"`, `"pool"`). |
-| `sounds` | `Record<string, (intensity?: number) => void>` | Mapping des identifiants SFX vers les fonctions de lecture audio locales. |
-| `onCustomMessage` | `(msg: NetworkMessage) => void` | Handler pour capturer les messages personnalisés du réseau. |
+| `externalPeerManager` | `PeerManagerLike<TState>` | `PeerManager` instance injected by Hub (embedded mode). |
+| `namespacePrefix` | `string` | **Required without `externalPeerManager`**. Unique namespace prefix preventing broker room collisions (e.g. `"royal"`, `"pool"`). |
+| `sounds` | `Record<string, (intensity?: number) => void>` | Mapping of SFX names to local audio play functions. |
+| `onCustomMessage` | `(msg: NetworkMessage) => void` | Event handler capturing non-core custom network packets. |
 
-#### Valeurs de retour
-| Propriété / Méthode | Type | Description |
+#### Return Values
+| Property / Method | Type | Description |
 | :--- | :--- | :--- |
-| `myPeerId` | `string \| null` | ID PeerJS du joueur local. |
-| `hostPeerId` | `string \| null` | ID PeerJS de l'hôte de la partie. |
-| `isHost` | `boolean` | `true` si le joueur local est l'hôte de la partie. |
-| `connectedPeers` | `string[]` | Liste des IDs des pairs actuellement connectés. |
-| `chatMessages` | `ChatMessage[]` | Historique des messages de chat reçus. |
-| `gameState` | `TState \| null` | État courant du jeu synchronisé. |
-| `setGameState` | `Dispatch<SetStateAction<TState \| null>>` | Setter React local pour `gameState`. |
-| `customMessages` | `NetworkMessage[]` | Tampon des 20 derniers messages personnalisés reçus. |
-| `status` | `'IDLE' \| 'CONNECTING' \| 'CONNECTED' \| 'DISCONNECTED'` | Statut de la connexion P2P. |
-| `error` | `string \| null` | Message d'erreur éventuel. |
-| `hostGame(customRoomId?)` | `(customRoomId?: string \| null) => Promise<string>` | Initialise le pair en tant qu'hôte et crée un salon. |
-| `joinGame(roomId)` | `(roomId: string) => Promise<string>` | Rejoint un salon distant via son code de salon. |
-| `sendAction(actionName, payload?)` | `(actionName: string, payload?: any) => void` | Envoie une action au joueur hôte. |
-| `sendChat(senderName, text)` | `(senderName: string, text: string) => void` | Diffuse un message de chat dans le salon. |
-| `playSfx(sfxName, intensity?)` | `(sfxName: string, intensity?: number) => void` | Déclenche un son P2P chez tous les joueurs. |
-| `disconnect()` | `() => void` | Ferme toutes les connexions P2P et détruit l'instance. |
-| `peerManager` | `PeerManagerLike<TState>` | L'instance sous-jacente du gestionnaire réseau. |
+| `myPeerId` | `string \| null` | PeerJS ID of local player. |
+| `hostPeerId` | `string \| null` | PeerJS ID of game host. |
+| `isHost` | `boolean` | `true` if local player is game host. |
+| `connectedPeers` | `string[]` | Array of currently connected peer IDs. |
+| `chatMessages` | `ChatMessage[]` | Text chat history. |
+| `gameState` | `TState \| null` | Synchronized current game state. |
+| `setGameState` | `Dispatch<SetStateAction<TState \| null>>` | Local React setter for `gameState`. |
+| `customMessages` | `NetworkMessage[]` | Ring buffer of last 20 custom network messages. |
+| `status` | `'IDLE' \| 'CONNECTING' \| 'CONNECTED' \| 'DISCONNECTED'` | Current P2P connection status. |
+| `error` | `string \| null` | Connection or protocol error message. |
+| `hostGame(customRoomId?)` | `(customRoomId?: string \| null) => Promise<string>` | Initializes peer as host and creates room. |
+| `joinGame(roomId)` | `(roomId: string) => Promise<string>` | Joins remote host room by room code. |
+| `sendAction(actionName, payload?)` | `(actionName: string, payload?: any) => void` | Sends game action packet to host. |
+| `sendChat(senderName, text)` | `(senderName: string, text: string) => void` | Broadcasts text chat message to room. |
+| `playSfx(sfxName, intensity?)` | `(sfxName: string, intensity?: number) => void` | Triggers P2P sound effect across all players. |
+| `disconnect()` | `() => void` | Closes P2P connections and cleans up instance. |
+| `peerManager` | `PeerManagerLike<TState>` | Underlying peer manager instance. |
 
 ---
 
-### 2. Classe `PeerManager<TState>`
+### 2. `PeerManager<TState>` Class
 
-Classe de bas niveau gérant les connexions transport PeerJS WebRTC DataChannel.
+Low-level transport manager handling PeerJS WebRTC DataChannels.
 
-#### Instanciation
+#### Constructor
 ```ts
 const peerManager = new PeerManager({
   namespacePrefix: 'skull',
@@ -65,64 +65,50 @@ const peerManager = new PeerManager({
 });
 ```
 
-#### Méthodes Principales
-- `initHost(customRoomId?: string | null): Promise<string>` : Initialise l'hôte P2P.
-- `initClient(hostRoomId: string): Promise<string>` : Se connecte à l'hôte.
-- `broadcast(message: NetworkMessage, excludePeerId?: string): void` : Envoie un paquet à tous les pairs connectés.
-- `sendToHost(type: string, payload: Record<string, unknown>): void` : Transmet une demande à l'hôte.
-- `sendAudio(sfx: string, intensity?: number): void` : Transmet un événement sonore.
-- `sendChat(senderName: string, text: string): void` : Transmet un message de chat.
-- `disconnect(): void` : Ferme la session.
+#### Key Methods
+- `initHost(customRoomId?: string | null): Promise<string>`: Initializes host instance.
+- `initClient(hostRoomId: string): Promise<string>`: Connects client to host.
+- `broadcast(message: NetworkMessage, excludePeerId?: string): void`: Sends packet to all connected peers.
+- `sendToHost(type: string, payload: Record<string, unknown>): void`: Sends request packet to host.
+- `sendAudio(sfx: string, intensity?: number): void`: Sends SFX trigger event.
+- `sendChat(senderName: string, text: string): void`: Sends text chat message.
+- `disconnect(): void`: Closes session.
 
 ---
 
-### 3. Types de Messages Réseau (`NetworkMessage`)
-
-```ts
-export type NetworkMessage =
-  | StateUpdateMessage
-  | ChatMessage
-  | AudioEventMessage
-  | VoiceStateUpdateMessage
-  | VoiceModerationActionMessage
-  | { type: string; [key: string]: unknown };
-```
-
----
-
-## 👁️ Module Spectateur (`p2play-core/spectator`)
+## 👁️ Spectator Module (`p2play-core/spectator`)
 
 ### `useSpectatorRole<TState>(options)`
-Hook React pour gérer la séparation Joueur / Spectateur et la désinfection de l'état.
+React hook managing Player / Spectator separation and state sanitization.
 
 #### Options
-- `peerManager`: Instance `PeerManagerLike<TState>`
+- `peerManager`: `PeerManagerLike<TState>`
 - `isHost`: `boolean`
 - `myPeerId`: `string | null`
 - `gameState`: `TState | null`
 - `sanitizeForViewer`: `(state: TState, viewerPeerId: string | null, spectatorConfig: SpectatorConfig) => TState`
 
-#### Propriétés retournées
+#### Return Values
 - `spectatorConfig`: `SpectatorConfig` (`{ spectators: string[]; lock: boolean }`)
 - `currentRole`: `'PLAYER' | 'SPECTATOR'`
 - `isCurrentSpectator`: `boolean`
 - `assignRole(peerId: string, role: 'PLAYER' | 'SPECTATOR'): void`
 - `toggleLock(): void`
-- `sanitizedGameState`: `TState | null` (État nettoyé des informations secrètes)
+- `sanitizedGameState`: `TState | null` (Scrubbed state sanitized for spectator/rival viewing)
 
 ---
 
-## 🎙️ Module Chat Vocal (`p2play-core/voice`)
+## 🎙️ Voice Chat Module (`p2play-core/voice`)
 
 ### `useVoiceChat(options)`
-Hook React pour gérer le maillage WebRTC audio et la communication vocale P2P.
+React hook managing WebRTC audio mesh network and voice controls.
 
 #### Options
-- `peer`: Instance `Peer | null` de PeerJS
+- `peer`: PeerJS `Peer | null`
 - `myPeerId`: `string | null`
 - `connectedPeers`: `string[]`
 
-#### Propriétés retournées
+#### Return Values
 - `isInitialized`: `boolean`
 - `isMuted`: `boolean`
 - `isDeafened`: `boolean`
@@ -134,10 +120,10 @@ Hook React pour gérer le maillage WebRTC audio et la communication vocale P2P.
 
 ---
 
-### Composants UI Vocaux
+### Voice UI Components
 
 #### `<VoiceChatPanel />`
-Panneau de contrôle vocal avec gestion du volume, modération et retour visuel.
+Voice control panel with volume sliders, spatial audio toggles, and moderation tools.
 ```tsx
 <VoiceChatPanel
   voice={voice}
@@ -148,7 +134,7 @@ Panneau de contrôle vocal avec gestion du volume, modération et retour visuel.
 ```
 
 #### `<VoiceBubble />`
-Bulle d'indicateur audio d'avatar (par exemple au-dessus du joueur sur le plateau de jeu).
+Floating voice activity bubble for player avatars on game boards.
 ```tsx
 <VoiceBubble
   peerId="peer123"

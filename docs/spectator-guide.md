@@ -1,25 +1,25 @@
-# 👁️ Guide du Mode Spectateur dans `p2play-core`
+# 👁️ Spectator Mode Guide (`p2play-core/spectator`)
 
-Le module spectateur (`p2play-core/spectator`) offre une gestion complète des rôles Joueur / Spectateur dans les jeux P2Play, avec verrouillage des rôles et désinfection des données d'état privées.
-
----
-
-## 🎯 Concepts Clés
-
-1. **Rôles** :
-   - `PLAYER` : Joueur actif participant à la partie.
-   - `SPECTATOR` : Observateur passif.
-2. **Configuration (`SpectatorConfig`)** :
-   - Contient la liste des IDs PeerJS désignés comme spectateurs et un booléen `lock` (si `true`, la modification des rôles est verrouillée par l'hôte).
-3. **Désinfection d'État (`sanitizeForViewer`)** :
-   - Les spectateurs ne doivent pas voir les informations secrètes des joueurs (ex: cartes en main dans *Royal Bluff* ou *Skull & Roses*, rôles cachés).
-   - `sanitizeForViewer` est appelée pour chaque destinataire avant l'affichage ou la transmission.
+The spectator module (`p2play-core/spectator`) provides complete Player / Spectator role management for P2Play games, featuring role locking and secret state sanitization.
 
 ---
 
-## 🚀 Utilisation dans un Jeu
+## 🎯 Key Concepts
 
-### 1. Importation du Module Spectateur
+1. **Roles**:
+   - `PLAYER`: Active participant playing the game.
+   - `SPECTATOR`: Passive observer viewing the match.
+2. **Configuration (`SpectatorConfig`)**:
+   - Contains the array of spectator peer IDs and a `lock` boolean (`true` locks role assignment to host only).
+3. **State Sanitization (`sanitizeForViewer`)**:
+   - Spectators and opponents must not see private information (e.g. hand cards in *Royal Bluff* or *Skull & Roses*, secret roles).
+   - `sanitizeForViewer` is called per recipient before rendering or broadcasting state updates.
+
+---
+
+## 🚀 Game Integration
+
+### 1. Import Spectator Module
 
 ```ts
 import {
@@ -30,7 +30,7 @@ import {
 } from 'p2play-core/spectator';
 ```
 
-### 2. Définition de la Fonction de Sanitization (`sanitizeForViewer`)
+### 2. Define Sanitization Function (`sanitizeForViewer`)
 
 ```ts
 import type { GameState } from './types';
@@ -43,12 +43,10 @@ export function sanitizeGameStateForViewer(
 ): GameState {
   if (!state) return state;
 
-  const viewerIsSpectator = viewerPeerId ? spectatorConfig.spectators.includes(viewerPeerId) : false;
-
   return {
     ...state,
     players: state.players.map((p) => {
-      // Masquer les cartes en main sauf si c'est le joueur lui-même
+      // Scrub hand cards unless viewer is the card owner
       if (p.peerId !== viewerPeerId) {
         return {
           ...p,
@@ -61,7 +59,7 @@ export function sanitizeGameStateForViewer(
 }
 ```
 
-### 3. Intégration du Hook `useSpectatorRole`
+### 3. Use `useSpectatorRole` Hook
 
 ```tsx
 import { usePeer } from 'p2play-core';
@@ -92,14 +90,14 @@ export function GameApp({ externalPeerManager }: { externalPeerManager?: any }) 
   return (
     <div>
       {isCurrentSpectator ? (
-        <div className="badge">Mode Spectateur</div>
+        <div className="badge">Spectator Mode</div>
       ) : (
         <button onClick={() => assignRole(myPeerId!, 'SPECTATOR')}>
-          Passer Spectateur
+          Switch to Spectator
         </button>
       )}
 
-      {/* Afficher le jeu avec l'état nettoyé */}
+      {/* Render game board with scrubbed state */}
       <GameBoard state={sanitizedGameState} />
     </div>
   );
@@ -108,9 +106,9 @@ export function GameApp({ externalPeerManager }: { externalPeerManager?: any }) 
 
 ---
 
-## 🔒 Gestion des Arrivées en Cours de Partie
+## 🔒 Handling Late Joiners
 
-Si la partie a déjà démarré (`phase === 'PLAYING'`), tout nouveau joueur rejoignant le salon peut être automatiquement assigné comme spectateur :
+If a game is already in progress (`phase === 'PLAYING'`), any late-joining player can be assigned directly as a spectator:
 
 ```ts
 if (gameEngine.state.phase === 'PLAYING') {
