@@ -106,3 +106,51 @@ export async function copyRoomUrlToClipboard(roomCode: string, options?: RoomUrl
 
   return false;
 }
+
+/**
+ * Updates the browser address bar to the shareable room URL (hash `/#/CODE` by default)
+ * so the host can copy it from the location bar after creating a room.
+ */
+export function syncRoomUrlToAddressBar(roomCode: string, options: RoomUrlOptions = {}): void {
+  if (typeof window === "undefined") return;
+  const cleanCode = roomCode.trim().toUpperCase();
+  if (!cleanCode) return;
+  if (extractRoomCodeFromUrl() === cleanCode) return;
+
+  const useHash = options.useHash ?? true;
+  if (useHash) {
+    const pathAndQuery = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", `${pathAndQuery}#/${cleanCode}`);
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", cleanCode);
+  window.history.replaceState(null, "", url.toString());
+}
+
+/**
+ * Removes room code from the address bar (hash or `?room=` query).
+ */
+export function clearRoomUrlFromAddressBar(options: RoomUrlOptions = {}): void {
+  if (typeof window === "undefined") return;
+  const useHash = options.useHash ?? true;
+
+  if (useHash) {
+    if (!window.location.hash) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  let changed = false;
+  for (const key of ["room", "code", "r", "join"]) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+  if (changed) {
+    window.history.replaceState(null, "", url.toString());
+  }
+}

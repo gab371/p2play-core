@@ -1,4 +1,4 @@
-# Rule: Persistent Hub Integration (`hub-p2play`) & `p2play-core`
+﻿# Rule: Persistent Hub Integration (`hub-p2play`) & `p2play-core`
 
 To allow any game to be mounted dynamically inside the unified `hub-p2play` (SPA without iFrames) while remaining 100% playable in standalone mode, every game's components and build configurations MUST use the unified **[`p2play-core`](https://github.com/gab371/p2play-core)** library and adhere to the following rules.
 
@@ -10,14 +10,15 @@ All games in the P2Play ecosystem MUST declare `p2play-core` dependency in `pack
 
 ```json
 "dependencies": {
-  "p2play-core": "github:gab371/p2play-core#v0.2.0"
+  "p2play-core": "github:gab371/p2play-core#v0.3.1"
 }
 ```
 
 Reference Documentation:
-- 📖 **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
-- 👁️ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
-- 🎙️ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
+- ðŸ“– **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
+- ðŸ  **[Shared Lobby Guide (`P2PlayLobby`)](https://github.com/gab371/p2play-core/blob/main/docs/lobby-guide.md)**
+- ðŸ‘ï¸ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
+- ðŸŽ™ï¸ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
 
 ---
 
@@ -36,7 +37,7 @@ import { readFileSync } from "fs"
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
-// Lib build: force a single React instance (Hub embed). Dual React → useRef null.
+// Lib build: force a single React instance (Hub embed). Dual React â†’ useRef null.
 const reactAliases = {
   react: path.resolve(__dirname, "node_modules/react"),
   "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
@@ -146,7 +147,7 @@ export function usePeer(options?: { externalPeerManager?: PeerManagerLike }) {
   return useCorePeer({
     externalPeerManager: options?.externalPeerManager,
     namespacePrefix: "royal", // Unique per game
-    sounds: { /* map sfx → soundManager */ },
+    sounds: { /* map sfx â†’ soundManager */ },
   });
 }
 ```
@@ -155,7 +156,31 @@ When `externalPeerManager` is passed, `usePeer` reuses Hub's WebRTC session seam
 
 ---
 
-## 5. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
+## 5. Shared Home Lobby (`P2PlayLobby`)
+
+Standalone create/join screens MUST use `<P2PlayLobby />` from `p2play-core` (do not reimplement host/join forms). Connected-room UI (ready, spectators, deck config) remains game-specific.
+
+```tsx
+import { P2PlayLobby } from "p2play-core";
+
+<P2PlayLobby
+  theme="amber" // required for URL invitation colors even when using classes
+  status={status}
+  error={error}
+  showVoiceToggle={false}
+  compactHostSection
+  joinLayout="side-by-side"
+  onHost={onHost}
+  onJoin={onJoin}
+  classes={{ /* game Tailwind tokens incl. urlNotice */ }}
+/>
+```
+
+See [lobby-guide.md](../../lobby-guide.md).
+
+---
+
+## 6. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
 
 Hub manages game selection and player gathering in its own room. Sub-games MUST NOT re-display their local home screen (username form, join code).
 
@@ -166,13 +191,13 @@ When `isEmbedded={true}` and `externalPeerManager` are provided:
 
 ---
 
-## 6. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
+## 7. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
 
 In embedded mode, WebRTC connection belongs to Hub (`externalPeerManager`). Sub-game MUST NOT destroy this connection. Exit buttons must invoke `onExit` (return to Hub) and NEVER `game.disconnect` / `peerManager.disconnect`.
 
 ---
 
-## 7. Voice Chat & Spectator Mode
+## 8. Voice Chat & Spectator Mode
 
 For games requiring voice chat or spectator features:
 - **Voice Chat**: Use `useVoiceChat`, `<VoiceChatPanel />`, and `<VoiceBubble />` from `p2play-core/voice`.

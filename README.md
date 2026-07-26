@@ -1,4 +1,4 @@
-# 🎮 `p2play-core`
+﻿# ðŸŽ® `p2play-core`
 
 **Standalone-first P2P toolkit and unified networking engine for [P2Play](https://github.com/gab371) games.**
 
@@ -6,32 +6,33 @@
 
 ---
 
-## ✨ Key Features
+## âœ¨ Key Features
 
-- 🚀 **Standalone-First Architecture**: Works 100% autonomously in any Vite/React game (hosting & joining rooms) **OR** in embedded mode inside **P2Play Hub** with zero WebRTC disconnection.
-- 🌐 **WebRTC P2P Network (PeerJS)**: Serverless mesh/star direct peer connections without a central game server.
-- ⚛️ **`usePeer` React Hook**: Out-of-the-box abstraction handling auto-reconnect, game state sync, player actions, text chat, and P2P sound effect triggering.
-- 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
-- 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
-- 🔗 **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
+- ðŸš€ **Standalone-First Architecture**: Works 100% autonomously in any Vite/React game (hosting & joining rooms) **OR** in embedded mode inside **P2Play Hub** with zero WebRTC disconnection.
+- ðŸ  **Shared Home Lobby (`P2PlayLobby`)**: Themed create/join UI with URL invitation deep-links, optional voice toggle, and Tailwind `classes` overrides per game.
+- ðŸŒ **WebRTC P2P Network (PeerJS)**: Serverless mesh/star direct peer connections without a central game server.
+- âš›ï¸ **`usePeer` React Hook**: Out-of-the-box abstraction handling auto-reconnect, game state sync, player actions, text chat, and P2P sound effect triggering.
+- ðŸ‘ï¸ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
+- ðŸŽ™ï¸ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
+- ðŸ”— **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
 
 ---
 
-## 📦 Installation
+## ðŸ“¦ Installation
 
 In your React/Vite game project:
 
 ```bash
 # Via GitHub release tag
-npm install github:gab371/p2play-core#v0.2.0
+npm install github:gab371/p2play-core#v0.3.1
 
 # Or with pnpm
-pnpm add github:gab371/p2play-core#v0.2.0
+pnpm add github:gab371/p2play-core#v0.3.1
 ```
 
 ---
 
-## 🚀 Quick Start
+## ðŸš€ Quick Start
 
 ### 1. Standalone Game Mode
 
@@ -80,6 +81,30 @@ export function StandaloneGame() {
 
 ---
 
+## ðŸ  Shared Home Lobby (`P2PlayLobby`)
+
+Use the shared component for the standalone create/join screen instead of reimplementing forms:
+
+```tsx
+import { P2PlayLobby } from 'p2play-core';
+
+<P2PlayLobby
+  title="MY GAME"
+  theme="amber"
+  status={status}
+  error={error}
+  showVoiceToggle={false}
+  compactHostSection
+  joinLayout="side-by-side"
+  onHost={(name, avatar) => hostRoom(name, avatar)}
+  onJoin={(name, avatar, code) => joinRoom(name, avatar, code)}
+/>
+```
+
+ðŸ“˜ Full guide: **[Shared Lobby Guide](docs/lobby-guide.md)**
+
+---
+
 ### 2. Hub Embedded Mode
 
 When mounted dynamically by **P2Play Hub**, the Hub injects its active network instance via `externalPeerManager`:
@@ -106,7 +131,7 @@ export function App({ isEmbedded, externalPeerManager }: AppProps) {
 
 ---
 
-## 👁️ Spectator Module (`p2play-core/spectator`)
+## ðŸ‘ï¸ Spectator Module (`p2play-core/spectator`)
 
 Safely host observers without impacting game rules by scrubbing secret information (e.g. hidden hand cards):
 
@@ -144,11 +169,11 @@ export function GameWithSpectators({ externalPeerManager }: { externalPeerManage
 }
 ```
 
-📘 Read the **[Spectator Mode Guide](docs/spectator-guide.md)** for full documentation.
+ðŸ“˜ Read the **[Spectator Mode Guide](docs/spectator-guide.md)** for full documentation.
 
 ---
 
-## 🎙️ WebRTC Voice Chat Module (`p2play-core/voice`)
+## ðŸŽ™ï¸ WebRTC Voice Chat Module (`p2play-core/voice`)
 
 Integrate serverless P2P voice chat with volume controls, spatial audio, and avatar voice bubbles:
 
@@ -174,19 +199,20 @@ export function GameWithVoice() {
 }
 ```
 
-📘 Read the **[Voice Chat Guide](docs/voice-chat-guide.md)** for full documentation.
+ðŸ“˜ Read the **[Voice Chat Guide](docs/voice-chat-guide.md)** for full documentation.
 
 ---
 
-## 📚 Documentation Links
+## ðŸ“š Documentation Links
 
-- 📖 **[API Reference](docs/api-reference.md)**: Complete reference of all hooks, types, and classes.
-- 👁️ **[Spectator Mode Guide](docs/spectator-guide.md)**: Role management and state sanitization.
-- 🎙️ **[Voice Chat Guide](docs/voice-chat-guide.md)**: WebRTC P2P mesh topology and spatial audio.
+- ðŸ“– **[API Reference](docs/api-reference.md)**: Complete reference of all hooks, types, and classes.
+- ðŸ  **[Shared Lobby Guide](docs/lobby-guide.md)**: `P2PlayLobby` themes, classes, and URL invitations.
+- ðŸ‘ï¸ **[Spectator Mode Guide](docs/spectator-guide.md)**: Role management and state sanitization.
+- ðŸŽ™ï¸ **[Voice Chat Guide](docs/voice-chat-guide.md)**: WebRTC P2P mesh topology and spatial audio.
 
 ---
 
-## ⚙️ Peer Dependencies
+## âš™ï¸ Peer Dependencies
 
 - `peerjs`: `^1.5.0`
 - `react`: `^19.0.0`
@@ -194,7 +220,7 @@ export function GameWithVoice() {
 
 ---
 
-## 🔄 Versioning & Release Workflow
+## ðŸ”„ Versioning & Release Workflow
 
 1. Update code in `src/`
 2. Run `npm run build` (generates ESM bundles in `dist/` using `tsup`)

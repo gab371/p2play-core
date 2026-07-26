@@ -66,6 +66,7 @@ Read the detailed rule markdown files for concrete examples and instructions:
 ## Common Pitfalls to Avoid
 
 - **Reimplementing PeerJS or local `PeerManager` from scratch**: Always use `p2play-core` (`PeerManager`, `usePeer`, `PeerManagerLike`).
+- **Reimplementing the standalone create/join home form**: Always use `<P2PlayLobby />` from `p2play-core`, with a matching `theme` + `classes` (incl. `urlNotice`). Connected-room lobbies stay game-specific.
 - **Combining Hooks and UI in one React file**: Always extract state management, event handling, and PeerJS subscriptions into custom hooks (e.g. `hooks/useGame.ts` or `hooks/usePeer.ts`).
 - **Embedding PeerJS messaging logic inside UI components**: UI should not know about network packet parsing or raw PeerJS connection states. It should only interact with abstracted state/callbacks.
 - **Putting game engine logic inside React state hooks**: Game rules (such as scoring, round calculation, deck shuffling) must reside in pure TypeScript modules (`src/core/`) and be tested independently of React.

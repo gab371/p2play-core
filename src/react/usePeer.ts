@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PeerManager } from "../peer/PeerManager";
 import type { PeerManagerLike } from "../peer/PeerManagerLike";
 import type { ChatMessage, NetworkMessage } from "../peer/types";
+import { clearRoomUrlFromAddressBar, syncRoomUrlToAddressBar } from "../url";
 
 export type PeerStatus = "IDLE" | "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 
@@ -97,6 +98,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         setIsHost(true);
         setStatus("CONNECTED");
         setError(null);
+        syncRoomUrlToAddressBar(id);
         return id;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Impossible de créer le salon.";
@@ -119,6 +121,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         setIsHost(false);
         setStatus("CONNECTED");
         setError(null);
+        syncRoomUrlToAddressBar(roomId);
         return id;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Impossible de rejoindre le salon.";
@@ -166,6 +169,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
     setGameState(null);
     setCustomMessages([]);
     setStatus("IDLE");
+    clearRoomUrlFromAddressBar();
   }, [peerManager]);
 
   return {

@@ -6,12 +6,13 @@ This document provides a comprehensive reference for the `p2play-core` package, 
 
 ## 📦 Entry Points (ESM Exports)
 
-`p2play-core` provides 3 modular entry points:
+`p2play-core` provides 4 modular entry points:
 
 ```ts
-import { PeerManager, usePeer, PeerManagerLike } from 'p2play-core';
+import { PeerManager, usePeer, P2PlayLobby, LOBBY_THEMES } from 'p2play-core';
 import { useSpectatorRole, isSpectator } from 'p2play-core/spectator';
 import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
+import { copyRoomUrlToClipboard, extractRoomCodeFromUrl } from 'p2play-core/url';
 ```
 
 ---
@@ -73,6 +74,46 @@ const peerManager = new PeerManager({
 - `sendAudio(sfx: string, intensity?: number): void`: Sends SFX trigger event.
 - `sendChat(senderName: string, text: string): void`: Sends text chat message.
 - `disconnect(): void`: Closes session.
+
+---
+
+### 3. `<P2PlayLobby />` Shared Home Screen
+
+React component for the standalone **create / join** home lobby. Connected-room UI (ready, spectators, config) stays in each game.
+
+```tsx
+import { P2PlayLobby } from 'p2play-core';
+
+<P2PlayLobby
+  title="SKULL"
+  theme="red"
+  status={status}
+  error={error}
+  showVoiceToggle={false}
+  compactHostSection
+  joinLayout="side-by-side"
+  onHost={(name, avatar) => hostRoom(name, avatar)}
+  onJoin={(name, avatar, code) => joinRoom(name, avatar, code)}
+  classes={{ root: "max-w-md mx-auto p-8 ...", urlNotice: "p-5 ..." }}
+/>
+```
+
+#### Key props
+| Prop | Type | Description |
+| :--- | :--- | :--- |
+| `theme` | `'violet' \| 'amber' \| 'emerald' \| 'red' \| P2PlayLobbyTheme` | Built-in or custom palette (also used by URL invitation UI). |
+| `status` | `string` | From `usePeer` — `CONNECTING` disables actions. |
+| `defaultUsername` | `string` | Defaults to `Joueur_XXX`. Pass `""` for empty field. |
+| `showVoiceToggle` | `boolean` | Host voice switch (Hub on, games usually off). |
+| `compactHostSection` | `boolean` | Single create button without voice box. |
+| `joinLayout` | `'stacked' \| 'side-by-side'` | Join code layout. |
+| `bannerFollowsAvatar` | `boolean` | Header emoji follows selected avatar. |
+| `subtitleTransform` | `'uppercase' \| 'none'` | Subtitle casing. |
+| `classes` | `P2PlayLobbyClasses` | Tailwind overrides (`root`, `createButton`, `urlNotice`, …). |
+| `onHost` / `onJoin` | callbacks | Preferred host/join handlers. |
+| `onCreateRoom` / `onJoinRoom` | callbacks | Alternate API with generated room code on create. |
+
+📘 See **[Shared Lobby Guide](lobby-guide.md)** for theming and Hub vs game patterns.
 
 ---
 

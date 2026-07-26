@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { extractRoomCodeFromUrl } from "../url";
+import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl } from "../url";
 
 export interface P2PlayLobbyTheme {
   primaryColor: string;
@@ -240,9 +240,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   const handleClearUrlCode = () => {
     setDetectedCode(null);
     setJoinCode("");
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", window.location.pathname);
-    }
+    clearRoomUrlFromAddressBar();
   };
 
   const isLoading = status === "CONNECTING";
