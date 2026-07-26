@@ -30,7 +30,11 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
   );
   const [isHost, setIsHost] = useState<boolean>(ext?.isHost || false);
   const [connectedPeers, setConnectedPeers] = useState<string[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const seedChat = (): ChatMessage[] => {
+    const hist = (ext as { chatHistory?: ChatMessage[] } | undefined)?.chatHistory;
+    return Array.isArray(hist) ? [...hist] : [];
+  };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(seedChat);
   const [gameState, setGameState] = useState<TState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<PeerStatus>(ext ? "CONNECTED" : "IDLE");
@@ -56,11 +60,20 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
   }, [status, hostPeerId]);
 
   useEffect(() => {
+    // Hub-scoped history: re-seed when mounting over an external peer manager.
+    const hist = (peerManager as { chatHistory?: ChatMessage[] }).chatHistory;
+    if (Array.isArray(hist)) {
+      setChatMessages([...hist]);
+    }
+
     peerManager.onStateReceived = (state: TState) => {
       setGameState(state);
     };
 
+    // Chain previous listener (e.g. Hub useHub) so salon chat stays live during a game.
+    const previousChatHandler = peerManager.onChatReceived;
     peerManager.onChatReceived = (msg: ChatMessage) => {
+      previousChatHandler?.(msg);
       setChatMessages((prev) => [...prev, msg]);
       soundsRef.current?.ping?.();
     };
@@ -78,17 +91,21 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
       }
     };
 
+    const previousCustomHandler = peerManager.onCustomMessage ?? null;
     peerManager.onCustomMessage = (msg: NetworkMessage) => {
+      previousCustomHandler?.(msg);
       setCustomMessages((prev) => [...prev.slice(-20), msg]);
       onCustomMessageRef.current?.(msg);
     };
 
     return () => {
       peerManager.onStateReceived = null;
-      peerManager.onChatReceived = null;
+      peerManager.onChatReceived = previousChatHandler;
       peerManager.onAudioReceived = null;
       peerManager.onPeerStatusChange = null;
-      if (peerManager.onCustomMessage !== undefined) peerManager.onCustomMessage = null;
+      if (peerManager.onCustomMessage !== undefined) {
+        peerManager.onCustomMessage = previousCustomHandler;
+      }
     };
   }, [peerManager]);
 

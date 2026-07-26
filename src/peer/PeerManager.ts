@@ -121,7 +121,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       const msg = data as NetworkMessage;
       if (!msg?.type) return;
       if (msg.type === "CHAT") {
-        this.broadcast(msg);
+        this.broadcast(msg, conn.peer);
         this.onChatReceived?.(msg as ChatMessage);
       } else if (msg.type === "AUDIO_EVENT") {
         this.broadcast(msg);
@@ -244,9 +244,9 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
+    this.onChatReceived?.(chatMsg);
     if (this.isHost) {
       this.broadcast(chatMsg);
-      this.onChatReceived?.(chatMsg);
     } else if (this.hostPeerId) {
       const conn = this.connections.get(this.hostPeerId);
       if (conn?.open) conn.send(chatMsg);

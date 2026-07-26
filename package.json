@@ -1,6 +1,6 @@
 {
   "name": "p2play-core",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "description": "Standalone-first P2P toolkit for P2Play games (PeerJS transport, usePeer, optional spectator)",
   "repository": {
     "type": "git",
@@ -25,6 +25,10 @@
     "./url": {
       "types": "./dist/url/index.d.ts",
       "import": "./dist/url/index.js"
+    },
+    "./chat": {
+      "types": "./dist/chat/index.d.ts",
+      "import": "./dist/chat/index.js"
     }
   },
   "files": [

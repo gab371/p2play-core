@@ -14,6 +14,7 @@
 - ⚛️ **`usePeer` React Hook**: Out-of-the-box abstraction handling auto-reconnect, game state sync, player actions, text chat, and P2P sound effect triggering.
 - 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
 - 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
+- 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners).
 - 🔗 **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
 
 ---

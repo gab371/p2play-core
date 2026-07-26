@@ -25,4 +25,5 @@ export {
 export type { HubGameManifest } from "./hub/manifest";
 export * from "./voice";
 export * from "./url";
+export * from "./chat";
 
