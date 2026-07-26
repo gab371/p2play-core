@@ -38,6 +38,11 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     toggleDeafen,
     toggleLocalMute,
     setLocalVolume,
+    availableDevices,
+    selectedDeviceId,
+    switchAudioDevice,
+    inputVolume,
+    setInputVolume,
     serverMute,
     lockMute,
     isLocalMuted,
@@ -315,9 +320,8 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
               : "1px solid rgba(255, 255, 255, 0.1)",
             backgroundColor: deafened
               ? "rgba(168, 85, 247, 0.15)"
-              : "rgba(30, 31, 35, 0.8)",
+              : "rgba(255, 255, 255, 0.05)",
             color: deafened ? "#c084fc" : "#d4d4d8",
-            boxShadow: deafened ? "0 0 12px rgba(168, 85, 247, 0.2)" : "none",
             cursor: "pointer",
             transition: "all 0.15s ease-in-out",
           }}
@@ -326,9 +330,38 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0118 0v6M3 18a3 3 0 003 3h1a2 2 0 002-2v-3a2 2 0 00-2-2H4a1 1 0 00-1 1v3zm18 0a3 3 0 01-3 3h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3a1 1 0 011 1v3z" />
             {deafened && <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />}
           </svg>
-          <span>Sourdine</span>
+          <span>{deafened ? "Sourdine" : "Casque"}</span>
         </button>
       </div>
+
+      {/* Audio Device Selector Dropdown */}
+      {availableDevices.length > 0 && (
+        <div style={{ padding: "0 10px 8px 10px", borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+          <select
+            value={selectedDeviceId}
+            onChange={(e) => switchAudioDevice(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "4px 8px",
+              borderRadius: "8px",
+              backgroundColor: "rgba(10, 10, 12, 0.8)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              color: "#a1a1aa",
+              fontSize: "10px",
+              fontFamily: "sans-serif",
+              outline: "none",
+              cursor: "pointer",
+            }}
+            title="Choisir le microphone"
+          >
+            {availableDevices.map((dev) => (
+              <option key={dev.deviceId} value={dev.deviceId}>
+                🎙️ {dev.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Participant List (260px Vertical Card List) */}
       <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "8px", maxHeight: "250px", overflowY: "auto" }}>
@@ -361,8 +394,42 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
                 {/* Voice Bubble Component */}
                 <VoiceBubble participant={p} isSelf={isSelf} isHost={p.peerId === peerManager?.hostPeerId} />
 
-                {/* Right Controls for Other Participants */}
-                {!isSelf && (
+                {/* Right Controls for Self / Other Participants */}
+                {isSelf ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+                    {/* Self Input Volume Slider Toggle */}
+                    {showVol ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#09090b", padding: "2px 6px", borderRadius: "6px", border: "1px solid #27272a" }}>
+                        <span style={{ fontSize: "9px", fontFamily: "monospace", color: "#6ee7b7", width: "28px", textAlign: "right" }}>
+                          {Math.round(inputVolume * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="2"
+                          step="0.05"
+                          value={inputVolume}
+                          onChange={(e) => setInputVolume(parseFloat(e.target.value))}
+                          style={{ width: "40px", height: "4px", accentColor: "#10b981", cursor: "pointer" }}
+                        />
+                        <button
+                          onClick={() => setShowVolumeFor(null)}
+                          style={{ fontSize: "9px", color: "#71717a", background: "none", border: "none", cursor: "pointer", marginLeft: "2px" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowVolumeFor(p.peerId)}
+                        style={{ padding: "3px 6px", borderRadius: "6px", backgroundColor: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", fontSize: "9px", fontFamily: "monospace", color: "#6ee7b7", cursor: "pointer" }}
+                        title="Ajuster le volume d'entrée de mon micro"
+                      >
+                        🎙️ {Math.round(inputVolume * 100)}%
+                      </button>
+                    )}
+                  </div>
+                ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
                     {/* Volume popover toggle */}
                     {showVol ? (

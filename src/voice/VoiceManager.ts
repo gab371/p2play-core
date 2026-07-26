@@ -160,6 +160,81 @@ export class VoiceManager {
     this.syncMembersFromPeerManager();
   }
 
+  public availableDevices: Array<{ deviceId: string; label: string }> = [];
+  public selectedDeviceId: string = "";
+  public inputVolume: number = 1.0;
+  private inputGainNode: GainNode | null = null;
+  private dummyGainNode: GainNode | null = null;
+  private rawLocalStream: MediaStream | null = null;
+
+  public async enumerateAudioDevices(): Promise<Array<{ deviceId: string; label: string }>> {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices
+        .filter((d) => d.kind === "audioinput")
+        .map((d, index) => ({
+          deviceId: d.deviceId,
+          label: d.label || `Microphone ${index + 1}`,
+        }));
+      this.availableDevices = audioInputs;
+      if (!this.selectedDeviceId && audioInputs.length > 0) {
+        this.selectedDeviceId = audioInputs[0].deviceId;
+      }
+      this.notify();
+      return audioInputs;
+    } catch (err) {
+      console.warn("[p2play-core/voice] Could not enumerate audio devices:", err);
+      return [];
+    }
+  }
+
+  public async switchAudioDevice(deviceId: string): Promise<boolean> {
+    this.selectedDeviceId = deviceId;
+
+    if (this.rawLocalStream) {
+      this.rawLocalStream.getTracks().forEach((t) => t.stop());
+      this.rawLocalStream = null;
+    }
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream = null;
+    }
+
+    const success = await this.startMicrophone();
+    if (!success || !this.localStream) return false;
+
+    const activeStream = this.localStream as any as MediaStream;
+    const newTrack = activeStream?.getAudioTracks?.()[0];
+    if (newTrack) {
+      this.mediaCalls.forEach((call) => {
+        const peerConnection: RTCPeerConnection = call.peerConnection;
+        if (peerConnection) {
+          const senders = peerConnection.getSenders();
+          const audioSender = senders.find((s) => s.track?.kind === "audio");
+          if (audioSender) {
+            audioSender.replaceTrack(newTrack).catch((err) => {
+              console.warn("[p2play-core/voice] replaceTrack failed:", err);
+            });
+          }
+        }
+      });
+    }
+
+    this.notify();
+    return true;
+  }
+
+  public setInputVolume(volume: number): void {
+    this.inputVolume = Math.max(0, Math.min(2.0, volume));
+    if (this.inputGainNode) {
+      this.inputGainNode.gain.value = this.inputVolume;
+    }
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      this.audioContext.resume().catch(() => {});
+    }
+    this.notify();
+  }
+
   public async startMicrophone(): Promise<boolean> {
     if (this.lockMuted) {
       console.warn("[p2play-core/voice] Microphone is locked by host.");
@@ -175,17 +250,55 @@ export class VoiceManager {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+
+      if (this.selectedDeviceId) {
+        audioConstraints.deviceId = { exact: this.selectedDeviceId };
+      }
+
+      const rawStream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints,
         video: false,
       });
-      this.localStream = stream;
+
+      this.rawLocalStream = rawStream;
+      this.enumerateAudioDevices().catch(() => {});
+
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtxClass) {
+        if (!this.audioContext || this.audioContext.state === "closed") {
+          this.audioContext = new AudioCtxClass();
+        }
+        if (this.audioContext.state === "suspended") {
+          await this.audioContext.resume().catch(() => {});
+        }
+
+        const source = this.audioContext.createMediaStreamSource(rawStream);
+        this.inputGainNode = this.audioContext.createGain();
+        this.inputGainNode.gain.value = this.inputVolume;
+
+        // Dummy silent sink to keep Web Audio graph active for WebRTC senders
+        this.dummyGainNode = this.audioContext.createGain();
+        this.dummyGainNode.gain.value = 0.00001;
+        this.dummyGainNode.connect(this.audioContext.destination);
+
+        const destination = this.audioContext.createMediaStreamDestination();
+        source.connect(this.inputGainNode);
+        this.inputGainNode.connect(destination);
+        this.inputGainNode.connect(this.dummyGainNode);
+
+        const outputTrack = destination.stream.getAudioTracks()[0];
+        this.localStream = new MediaStream([outputTrack]);
+      } else {
+        this.localStream = rawStream;
+      }
+
       this.selfMuted = false;
-      this.setupVAD(stream);
+      this.setupVAD(rawStream);
       this.applyMuteToTracks();
 
       this.connectToAllPeers();
@@ -240,11 +353,17 @@ export class VoiceManager {
   }
 
   private applyMuteToTracks(): void {
-    if (!this.localStream) return;
     const isMuted = this.selfMuted || this.serverMuted || this.deafened;
-    this.localStream.getAudioTracks().forEach((track) => {
-      track.enabled = !isMuted;
-    });
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach((track) => {
+        track.enabled = !isMuted;
+      });
+    }
+    if (this.rawLocalStream) {
+      this.rawLocalStream.getAudioTracks().forEach((track) => {
+        track.enabled = !isMuted;
+      });
+    }
   }
 
   public connectToAllPeers(): void {
@@ -401,7 +520,12 @@ export class VoiceManager {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      this.audioContext = new AudioCtx();
+      if (!this.audioContext || this.audioContext.state === "closed") {
+        this.audioContext = new AudioCtx();
+      }
+      if (this.audioContext.state === "suspended") {
+        this.audioContext.resume().catch(() => {});
+      }
       const source = this.audioContext.createMediaStreamSource(stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
@@ -411,6 +535,9 @@ export class VoiceManager {
       const dataArray = new Uint8Array(bufferLength);
 
       this.vadInterval = window.setInterval(() => {
+        if (this.audioContext && this.audioContext.state === "suspended") {
+          this.audioContext.resume().catch(() => {});
+        }
         if (!this.analyser || this.selfMuted || this.serverMuted || this.deafened) {
           if (this.isSpeaking) {
             this.isSpeaking = false;

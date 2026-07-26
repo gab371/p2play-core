@@ -95,6 +95,11 @@ export function useVoiceChat({
     setLocalVolume: (targetPeerId: string, volume: number) => managerRef.current?.setLocalVolume(targetPeerId, volume),
     serverMute: (targetPeerId: string, muted: boolean) => managerRef.current?.serverMute(targetPeerId, muted),
     lockMute: (targetPeerId: string, locked: boolean) => managerRef.current?.lockMute(targetPeerId, locked),
+    availableDevices: manager?.availableDevices ?? [],
+    selectedDeviceId: manager?.selectedDeviceId ?? "",
+    switchAudioDevice: (deviceId: string) => managerRef.current?.switchAudioDevice(deviceId),
+    inputVolume: manager?.inputVolume ?? 1.0,
+    setInputVolume: (volume: number) => managerRef.current?.setInputVolume(volume),
     isLocalMuted: (targetPeerId: string) => managerRef.current?.isLocalMuted(targetPeerId) ?? false,
     getLocalVolume: (targetPeerId: string) => managerRef.current?.getLocalVolume(targetPeerId) ?? 1.0,
   };
