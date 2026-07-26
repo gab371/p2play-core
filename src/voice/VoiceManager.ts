@@ -79,8 +79,13 @@ export class VoiceManager {
     const members = pm.members || pm.lobbyState?.members || pm.lobbyPlayers;
     if (Array.isArray(members)) {
       const myId = pm.myPeerId;
+      const activeMemberIds = new Set<string>();
+      if (myId) activeMemberIds.add(myId);
+      activeMemberIds.add("local");
+
       members.forEach((m: any) => {
         if (!m.peerId) return;
+        activeMemberIds.add(m.peerId);
         if (m.peerId === myId) {
           if (m.username) this.username = m.username;
           if (m.avatar) this.avatar = m.avatar;
@@ -97,6 +102,14 @@ export class VoiceManager {
           isSpeaking: existing?.isSpeaking ?? false,
         });
       });
+
+      // Purge any participant that is no longer in the active members list
+      for (const peerId of Array.from(this.participantStates.keys())) {
+        if (!activeMemberIds.has(peerId)) {
+          this.cleanupPeerAudio(peerId);
+        }
+      }
+
       this.notify();
     }
   }
@@ -619,8 +632,10 @@ export class VoiceManager {
     if (msg.type === "VOICE_STATE_UPDATE") {
       const update = msg as unknown as VoiceStateUpdateMessage;
       if (update.voiceState?.peerId) {
-        this.participantStates.set(update.voiceState.peerId, update.voiceState);
-        this.notify();
+        if (this.participantStates.has(update.voiceState.peerId)) {
+          this.participantStates.set(update.voiceState.peerId, update.voiceState);
+          this.notify();
+        }
 
         if (this.peerManager.isHost) {
           this.syncAllStatesToAllPeers();
