@@ -3,8 +3,14 @@ import { PeerManager } from "../peer/PeerManager";
 import type { PeerManagerLike } from "../peer/PeerManagerLike";
 import type { ChatMessage, NetworkMessage } from "../peer/types";
 import { clearRoomUrlFromAddressBar, subscribeForeignRoomReload, syncRoomUrlToAddressBar } from "../url";
+import { saveSession, clearSession, loadSession, createSessionToken } from "../session/helpers";
 
 export type PeerStatus = "IDLE" | "CONNECTING" | "CONNECTED" | "DISCONNECTED";
+
+export interface PeerProfile {
+  username: string;
+  avatar: string;
+}
 
 export interface UsePeerOptions<TState = unknown> {
   externalPeerManager?: PeerManagerLike<TState>;
@@ -14,6 +20,10 @@ export interface UsePeerOptions<TState = unknown> {
   sounds?: Record<string, (intensity?: number) => void>;
   /** Optional handler for non-core client messages (e.g. SHOT_FRAME). */
   onCustomMessage?: (msg: NetworkMessage) => void;
+  /** Player name for session persistence. */
+  playerName?: string;
+  /** Player avatar for session persistence. */
+  playerAvatar?: string;
 }
 
 export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
@@ -93,6 +103,19 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
 
     const previousCustomHandler = peerManager.onCustomMessage ?? null;
     peerManager.onCustomMessage = (msg: NetworkMessage) => {
+      if (msg.type === "RECONNECT_ACCEPTED") {
+        const { peerId: newId } = (msg as unknown as { payload: { peerId: string; previousPeerId: string } }).payload;
+        const room = peerManager.hostPeerId;
+        if (room) {
+          saveSession(room, {
+            previousPeerId: newId,
+            username: options?.playerName || "Joueur",
+            avatar: options?.playerAvatar || "👤",
+            role: "player",
+            sessionToken: sessionTokenRef.current,
+          });
+        }
+      }
       previousCustomHandler?.(msg);
       setCustomMessages((prev) => [...prev.slice(-20), msg]);
       onCustomMessageRef.current?.(msg);
@@ -109,8 +132,10 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
     };
   }, [peerManager]);
 
+  const sessionTokenRef = useRef<string>(createSessionToken());
+
   const hostGame = useCallback(
-    async (customRoomId?: string | null): Promise<string> => {
+    async (customRoomId?: string | null, profile?: PeerProfile): Promise<string> => {
       if (!peerManager.initHost) throw new Error("initHost not available on this peer manager");
       setStatus("CONNECTING");
       try {
@@ -121,6 +146,15 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         setStatus("CONNECTED");
         setError(null);
         syncRoomUrlToAddressBar(id);
+        const username = profile?.username || options?.playerName || "Host";
+        const avatar = profile?.avatar || options?.playerAvatar || "👑";
+        saveSession(id, {
+          previousPeerId: id,
+          username,
+          avatar,
+          role: "player",
+          sessionToken: sessionTokenRef.current,
+        });
         return id;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Impossible de créer le salon.";
@@ -129,11 +163,14 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         throw err;
       }
     },
-    [peerManager],
+    [peerManager, options?.playerName, options?.playerAvatar],
   );
 
   const joinGame = useCallback(
-    async (roomId: string): Promise<string> => {
+    async (
+      roomId: string,
+      profile?: PeerProfile,
+    ): Promise<{ peerId: string; reconnectRequested: boolean }> => {
       if (!peerManager.initClient) throw new Error("initClient not available on this peer manager");
       setStatus("CONNECTING");
       try {
@@ -144,7 +181,33 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         setStatus("CONNECTED");
         setError(null);
         syncRoomUrlToAddressBar(roomId);
-        return id;
+
+        const prevSession = loadSession(roomId);
+        const username =
+          profile?.username || options?.playerName || prevSession?.username || "Joueur";
+        const avatar =
+          profile?.avatar || options?.playerAvatar || prevSession?.avatar || "👤";
+
+        let reconnectRequested = false;
+        if (prevSession && prevSession.previousPeerId !== id) {
+          reconnectRequested = true;
+          peerManager.sendToHost("REQUEST_RECONNECT", {
+            previousPeerId: prevSession.previousPeerId,
+            username,
+            sessionToken: prevSession.sessionToken,
+          });
+        }
+
+        sessionTokenRef.current = createSessionToken();
+        saveSession(roomId, {
+          previousPeerId: id,
+          username,
+          avatar,
+          role: "player",
+          sessionToken: sessionTokenRef.current,
+        });
+
+        return { peerId: id, reconnectRequested };
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Impossible de rejoindre le salon.";
         setError(message);
@@ -152,7 +215,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
         throw err;
       }
     },
-    [peerManager],
+    [peerManager, options?.playerName, options?.playerAvatar],
   );
 
   const sendAction = useCallback(
@@ -182,6 +245,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
   );
 
   const disconnect = useCallback(() => {
+    if (hostPeerId) clearSession(hostPeerId);
     peerManager.disconnect();
     setMyPeerId(null);
     setHostPeerId(null);
@@ -192,7 +256,7 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
     setCustomMessages([]);
     setStatus("IDLE");
     clearRoomUrlFromAddressBar();
-  }, [peerManager]);
+  }, [peerManager, hostPeerId]);
 
   return {
     myPeerId,

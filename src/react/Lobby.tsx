@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl, subscribeRoomUrlChanges } from "../url";
+import { loadSession } from "../session/helpers";
 
 export interface P2PlayLobbyTheme {
   primaryColor: string;
@@ -191,8 +192,18 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   className = "",
   style = {},
 }) => {
-  const [username, setUsername] = useState(() => defaultUsername ?? `Joueur_${Math.floor(Math.random() * 1000)}`);
-  const [selectedAvatar, setSelectedAvatar] = useState(() => defaultAvatar || avatars[0] || "👑");
+  const roomFromUrl = extractRoomCodeFromUrl();
+  const sessionFromUrl = roomFromUrl ? loadSession(roomFromUrl) : null;
+
+  const [username, setUsername] = useState(
+    () =>
+      sessionFromUrl?.username ||
+      defaultUsername ||
+      `Joueur_${Math.floor(Math.random() * 1000)}`,
+  );
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    () => sessionFromUrl?.avatar || defaultAvatar || avatars[0] || "👑",
+  );
   const displayBannerEmoji = bannerFollowsAvatar ? selectedAvatar : bannerEmoji;
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState(() => extractRoomCodeFromUrl() || "");
@@ -205,6 +216,9 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
         urlInvitationRef.current = code;
         setDetectedCode(code);
         setJoinCode(code);
+        const session = loadSession(code);
+        if (session?.username) setUsername(session.username);
+        if (session?.avatar) setSelectedAvatar(session.avatar);
         return;
       }
       if (urlInvitationRef.current) {

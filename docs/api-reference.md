@@ -6,13 +6,20 @@ This document provides a comprehensive reference for the `p2play-core` package, 
 
 ## 📦 Entry Points (ESM Exports)
 
-`p2play-core` provides 4 modular entry points:
+`p2play-core` provides modular entry points:
 
 ```ts
 import { PeerManager, usePeer, P2PlayLobby, LOBBY_THEMES, defineHubGameManifest } from 'p2play-core';
 import { useSpectatorRole, isSpectator } from 'p2play-core/spectator';
 import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
 import { copyRoomUrlToClipboard, extractRoomCodeFromUrl } from 'p2play-core/url';
+import { loadSession, saveSession } from 'p2play-core/session';
+import {
+  attachPresenceHandlers,
+  createSeatEngine,
+  handleJoinGameSeat,
+  remapRecordKey,
+} from 'p2play-core/presence';
 ```
 
 ---
@@ -223,3 +230,54 @@ Floating voice activity bubble for player avatars on game boards.
   avatar="👑"
 />
 ```
+
+---
+
+## ♻️ Presence Module (`p2play-core/presence`)
+
+Opt-in orchestration for **disconnect grace**, **REQUEST_RECONNECT**, and **JOIN_GAME seat** policy. Game engines keep business remap (`bags`, pending actions, …) behind `GameSeatEngine.remapPlayerId`.
+
+### `attachPresenceHandlers(options)`
+
+Wires PeerManager:
+
+- Chains existing `onPeerStatusChange` (voice / `usePeer` stay alive)
+- Lobby / spectator disconnect → immediate `removePlayer`
+- In-game disconnect → `markDisconnected` + grace timer (default 60s)
+- Intercepts `REQUEST_RECONNECT` → `RECONNECT_ACCEPTED` | `RECONNECT_REJECTED`
+
+```ts
+const getSeatEngine = () =>
+  createSeatEngine({
+    getPhase: () => engine.state.phase,
+    lobbyPhases: ["LOBBY"], // billard: ["LOBBY", "CONFIG"]
+    getPlayers: () => engine.state.players,
+    getSpectators: () => engine.state.spectators,
+    markDisconnected: (id) => engine.markDisconnected(id),
+    isDisconnected: (id) => engine.isDisconnected(id),
+    remapPlayerId: (o, n, p) => engine.remapPlayerId(o, n, p),
+    removePlayer: (id) => engine.removePlayer(id),
+  });
+
+const presence = attachPresenceHandlers({
+  peerManager,
+  getEngine: getSeatEngine,
+  graceMs: 60_000,
+  onBroadcast: () => broadcastSanitizedStates(engine.state),
+  onSeatRemapped: (oldId, newId) => { /* optional voice/chat */ },
+  onHostAction: (_sender, msg) => {
+    if (msg.type !== "ACTION") return;
+    // game switch — JOIN_GAME via handleJoinGameSeat(...)
+  },
+});
+
+// cleanup
+presence.dispose();
+```
+
+### Helpers
+
+- `createSeatEngine` / `adaptPlayersEngine` — thin adapters over engine state
+- `handleJoinGameSeat` — refresh if already seated; else lobby `addPlayer` / mid-game `addSpectator`
+- `remapRecordKey(record, oldId, newId)` — flat map remap for engines
+- `GraceRegistry` — low-level timer registry (usually via `attachPresenceHandlers`)

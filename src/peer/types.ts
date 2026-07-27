@@ -3,7 +3,19 @@ export type CoreMessageType =
   | "CHAT"
   | "AUDIO_EVENT"
   | "VOICE_STATE_UPDATE"
-  | "VOICE_MODERATION_ACTION";
+  | "VOICE_MODERATION_ACTION"
+  | "PING"
+  | "PONG";
+
+export interface PingMessage {
+  type: "PING";
+  ts: number;
+}
+
+export interface PongMessage {
+  type: "PONG";
+  ts: number;
+}
 
 export interface ChatMessage {
   type: "CHAT";
@@ -53,6 +65,8 @@ export type NetworkMessage =
   | StateUpdateMessage<unknown>
   | VoiceStateUpdateMessage
   | VoiceModerationActionMessage
+  | PingMessage
+  | PongMessage
   | { type: string; [key: string]: unknown };
 
 export interface LobbyPlayer {

@@ -7,6 +7,8 @@ export default defineConfig({
     "voice/index": "src/voice/index.ts",
     "url/index": "src/url/index.ts",
     "chat/index": "src/chat/index.ts",
+    "session/index": "src/session/index.ts",
+    "presence/index": "src/presence/index.ts",
   },
   format: ["esm"],
   dts: true,

@@ -154,6 +154,8 @@ export function usePeer(options?: { externalPeerManager?: PeerManagerLike }) {
 
 When `externalPeerManager` is passed, `usePeer` reuses Hub's WebRTC session seamlessly.
 
+Host-side disconnect / reconnect grace MUST use `attachPresenceHandlers` from `p2play-core/presence` (do not copy grace timers per game). See [api-reference Presence](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md) and the Idée 16 migration checklist.
+
 ---
 
 ## 5. Shared Home Lobby (`P2PlayLobby`)

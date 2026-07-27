@@ -30,6 +30,9 @@ export interface PeerManagerLike<TState = unknown> {
   sendAudio(sfx: string, intensity?: number): void;
   disconnect(): void;
 
+  startHeartbeat?(): void;
+  stopHeartbeat?(): void;
+
   initHost?(customRoomId?: string | null): Promise<string>;
   initClient?(hostRoomId: string): Promise<string>;
 }

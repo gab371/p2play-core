@@ -77,12 +77,19 @@ export class VoiceManager {
   public syncMembersFromPeerManager(): void {
     const pm = this.peerManager as any;
     const members = pm.members || pm.lobbyState?.members || pm.lobbyPlayers;
-    if (Array.isArray(members)) {
-      const myId = pm.myPeerId;
-      const activeMemberIds = new Set<string>();
-      if (myId) activeMemberIds.add(myId);
-      activeMemberIds.add("local");
+    const myId = pm.myPeerId;
+    const activeMemberIds = new Set<string>();
+    if (myId) activeMemberIds.add(myId);
+    activeMemberIds.add("local");
 
+    // Standalone games have no lobbyPlayers — seed from open DataConnections.
+    if (pm.connections instanceof Map) {
+      for (const peerId of pm.connections.keys()) {
+        if (peerId) activeMemberIds.add(peerId);
+      }
+    }
+
+    if (Array.isArray(members)) {
       members.forEach((m: any) => {
         if (!m.peerId) return;
         activeMemberIds.add(m.peerId);
@@ -102,16 +109,32 @@ export class VoiceManager {
           isSpeaking: existing?.isSpeaking ?? false,
         });
       });
-
-      // Purge any participant that is no longer in the active members list
-      for (const peerId of Array.from(this.participantStates.keys())) {
-        if (!activeMemberIds.has(peerId)) {
-          this.cleanupPeerAudio(peerId);
-        }
-      }
-
-      this.notify();
     }
+
+    // Ensure every connected peer has a slot (reconnect / standalone).
+    for (const peerId of activeMemberIds) {
+      if (peerId === "local") continue;
+      if (!this.participantStates.has(peerId)) {
+        this.participantStates.set(peerId, {
+          peerId,
+          username: peerId === myId ? this.username : "Joueur",
+          avatar: peerId === myId ? this.avatar : "👤",
+          selfMuted: true,
+          deafened: false,
+          serverMuted: false,
+          lockMuted: false,
+          isSpeaking: false,
+        });
+      }
+    }
+
+    for (const peerId of Array.from(this.participantStates.keys())) {
+      if (!activeMemberIds.has(peerId)) {
+        this.cleanupPeerAudio(peerId);
+      }
+    }
+
+    this.notify();
   }
 
   private setupNetworkListeners(): void {
@@ -632,10 +655,14 @@ export class VoiceManager {
     if (msg.type === "VOICE_STATE_UPDATE") {
       const update = msg as unknown as VoiceStateUpdateMessage;
       if (update.voiceState?.peerId) {
-        if (this.participantStates.has(update.voiceState.peerId)) {
-          this.participantStates.set(update.voiceState.peerId, update.voiceState);
-          this.notify();
-        }
+        // Always upsert — reconnecting peers are new ids not yet in the map.
+        const existing = this.participantStates.get(update.voiceState.peerId);
+        this.participantStates.set(update.voiceState.peerId, {
+          ...update.voiceState,
+          // Preserve local mute/volume UX if we already knew this peer
+          selfMuted: update.voiceState.selfMuted ?? existing?.selfMuted ?? true,
+        });
+        this.notify();
 
         if (this.peerManager.isHost) {
           this.syncAllStatesToAllPeers();

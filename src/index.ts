@@ -6,6 +6,8 @@ export type {
   VoiceParticipantState,
   VoiceStateUpdateMessage,
   VoiceModerationActionMessage,
+  PingMessage,
+  PongMessage,
   NetworkMessage,
   LobbyPlayer,
 } from "./peer/types";
@@ -26,4 +28,5 @@ export type { HubGameManifest } from "./hub/manifest";
 export * from "./voice";
 export * from "./url";
 export * from "./chat";
+// Presence is also available via `p2play-core/presence` (preferred for tree-shaking).
 

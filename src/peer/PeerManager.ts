@@ -1,7 +1,7 @@
 import { Peer } from "peerjs";
 import type { DataConnection } from "peerjs";
 import type { PeerManagerLike } from "./PeerManagerLike";
-import type { ChatMessage, LobbyPlayer, NetworkMessage } from "./types";
+import type { ChatMessage, LobbyPlayer, NetworkMessage, PingMessage, PongMessage } from "./types";
 
 export interface PeerManagerOptions {
   /** PeerJS id prefix to avoid broker collisions (e.g. "royal", "skull", "pool"). */
@@ -39,6 +39,11 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   private readonly namespacePrefix: string;
   private readonly peerjsDebug: 0 | 1 | 2 | 3;
 
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPongReceived: Map<string, number> = new Map();
+  private static readonly HEARTBEAT_MS = 5_000;
+  private static readonly HEARTBEAT_TIMEOUT_MS = 12_000;
+
   constructor(options: PeerManagerOptions) {
     this.namespacePrefix = options.namespacePrefix;
     this.peerjsDebug = options.peerjsDebug ?? 1;
@@ -62,6 +67,26 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     return `${this.namespacePrefix}_${hostClean}_${id}`;
   }
 
+  /**
+   * Map key for a live DataConnection. Clients store the host link under
+   * `hostRoomId` (short code), while `conn.peer` is the namespaced PeerJS id —
+   * heartbeat / close must use the map key, not `conn.peer`.
+   */
+  private keyForConnection(conn: DataConnection): string | null {
+    for (const [key, c] of this.connections) {
+      if (c === conn) return key;
+    }
+    return null;
+  }
+
+  private dropConnection(conn: DataConnection): void {
+    const key = this.keyForConnection(conn);
+    if (key === null) return;
+    this.connections.delete(key);
+    this.lastPongReceived.delete(key);
+    this.onPeerStatusChange?.(key, "DISCONNECTED");
+  }
+
   public initHost(customRoomId: string | null = null): Promise<string> {
     return new Promise((resolve, reject) => {
       const roomId = customRoomId || this.generateRoomId();
@@ -73,6 +98,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       this.peer.on("open", () => {
         this.myPeerId = roomId;
         this.hostPeerId = roomId;
+        this.startHeartbeat();
         resolve(roomId);
       });
       this.peer.on("connection", (conn) => this.handleHostIncomingConnection(conn));
@@ -93,7 +119,9 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         const conn = this.peer.connect(namespacedHostId, { reliable: true });
         conn.on("open", () => {
           this.connections.set(hostRoomId, conn);
+          this.lastPongReceived.set(hostRoomId, Date.now());
           this.setupClientConnectionListeners(conn);
+          this.startHeartbeat();
           resolve(id);
         });
         conn.on("error", (err) => reject(err));
@@ -106,6 +134,7 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   private handleClientIncomingConnection(conn: DataConnection): void {
     conn.on("open", () => {
       this.connections.set(conn.peer, conn);
+      this.lastPongReceived.set(conn.peer, Date.now());
       this.onPeerStatusChange?.(conn.peer, "CONNECTED");
     });
     this.setupClientConnectionListeners(conn);
@@ -114,12 +143,19 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   private handleHostIncomingConnection(conn: DataConnection): void {
     conn.on("open", () => {
       this.connections.set(conn.peer, conn);
+      this.lastPongReceived.set(conn.peer, Date.now());
       this.onPeerStatusChange?.(conn.peer, "CONNECTED");
     });
 
     conn.on("data", (data: unknown) => {
       const msg = data as NetworkMessage;
       if (!msg?.type) return;
+      if (msg.type === "PING") { this.handlePing(conn); return; }
+      if (msg.type === "PONG") {
+        const key = this.keyForConnection(conn) ?? conn.peer;
+        this.handlePong(key);
+        return;
+      }
       if (msg.type === "CHAT") {
         this.broadcast(msg, conn.peer);
         this.onChatReceived?.(msg as ChatMessage);
@@ -135,16 +171,20 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
       }
     });
 
-    conn.on("close", () => {
-      this.connections.delete(conn.peer);
-      this.onPeerStatusChange?.(conn.peer, "DISCONNECTED");
-    });
+    conn.on("close", () => this.dropConnection(conn));
+    conn.on("error", () => this.dropConnection(conn));
   }
 
   private setupClientConnectionListeners(conn: DataConnection): void {
     conn.on("data", (data: unknown) => {
       const msg = data as NetworkMessage;
       if (!msg?.type) return;
+      if (msg.type === "PING") { this.handlePing(conn); return; }
+      if (msg.type === "PONG") {
+        const key = this.keyForConnection(conn) ?? conn.peer;
+        this.handlePong(key);
+        return;
+      }
       switch (msg.type) {
         case "STATE_UPDATE": {
           const stateMsg = msg as { state?: TState };
@@ -179,10 +219,8 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
           break;
       }
     });
-    conn.on("close", () => {
-      this.connections.delete(conn.peer);
-      this.onPeerStatusChange?.(conn.peer, "DISCONNECTED");
-    });
+    conn.on("close", () => this.dropConnection(conn));
+    conn.on("error", () => this.dropConnection(conn));
   }
 
   public sendToHost(type: string, payload: Record<string, unknown>): void {
@@ -253,7 +291,54 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     }
   }
 
+  public startHeartbeat(): void {
+    this.stopHeartbeat();
+    const now = Date.now();
+    this.connections.forEach((_conn, peerId) => this.lastPongReceived.set(peerId, now));
+
+    this.heartbeatInterval = setInterval(() => {
+      const ping: PingMessage = { type: "PING", ts: Date.now() };
+      const deadline = Date.now() - PeerManager.HEARTBEAT_TIMEOUT_MS;
+      const timedOut: string[] = [];
+
+      this.connections.forEach((conn, peerId) => {
+        if (conn.open) conn.send(ping);
+        const lastSeen = this.lastPongReceived.get(peerId) ?? 0;
+        if (lastSeen < deadline) timedOut.push(peerId);
+      });
+
+      for (const peerId of timedOut) {
+        console.warn(`[p2play-core] heartbeat timeout for ${peerId}`);
+        const conn = this.connections.get(peerId);
+        this.connections.delete(peerId);
+        this.lastPongReceived.delete(peerId);
+        this.onPeerStatusChange?.(peerId, "DISCONNECTED");
+        try { conn?.close(); } catch { /* already dead */ }
+      }
+    }, PeerManager.HEARTBEAT_MS);
+  }
+
+  public stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    this.lastPongReceived.clear();
+  }
+
+  private handlePing(conn: DataConnection): void {
+    if (conn.open) {
+      const pong: PongMessage = { type: "PONG", ts: Date.now() };
+      conn.send(pong);
+    }
+  }
+
+  private handlePong(peerId: string): void {
+    this.lastPongReceived.set(peerId, Date.now());
+  }
+
   public disconnect(): void {
+    this.stopHeartbeat();
     this.connections.forEach((conn) => conn.close());
     this.connections.clear();
     if (this.peer) {

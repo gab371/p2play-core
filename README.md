@@ -15,6 +15,7 @@
 - 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
 - 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
 - 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners).
+- ♻️ **Presence & Reconnect (`p2play-core/presence`)**: Shared grace timers, `REQUEST_RECONNECT` protocol, and JOIN_GAME seat policy — games only implement `remapPlayerId` business maps.
 - 🔗 **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
 
 ---
