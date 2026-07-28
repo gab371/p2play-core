@@ -10,7 +10,7 @@ All games in the P2Play ecosystem MUST declare `p2play-core` dependency in `pack
 
 ```json
 "dependencies": {
-  "p2play-core": "github:gab371/p2play-core#v0.3.1"
+  "p2play-core": "github:gab371/p2play-core#v0.5.0"
 }
 ```
 
@@ -19,6 +19,7 @@ Reference Documentation:
 - 🏠 **[Shared Lobby Guide (`P2PlayLobby`)](https://github.com/gab371/p2play-core/blob/main/docs/lobby-guide.md)**
 - 👁️ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
 - 🎙️ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
+- ♻️ **[Presence & Reconnect Guide (`p2play-core/presence`)](https://github.com/gab371/p2play-core/blob/main/docs/presence-guide.md)**
 
 ---
 
@@ -154,11 +155,35 @@ export function usePeer(options?: { externalPeerManager?: PeerManagerLike }) {
 
 When `externalPeerManager` is passed, `usePeer` reuses Hub's WebRTC session seamlessly.
 
-Host-side disconnect / reconnect grace MUST use `attachPresenceHandlers` from `p2play-core/presence` (do not copy grace timers per game). See [api-reference Presence](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md) and the Idée 16 migration checklist.
+Pass a real **profile** (`username` / `avatar`) into `hostGame` / `joinGame` so `p2play-core/session` stores the correct identity for reconnect.
 
 ---
 
-## 5. Shared Home Lobby (`P2PlayLobby`)
+## 5. Presence & Reconnect (`p2play-core/presence`)
+
+Host-side disconnect / reconnect grace MUST use `attachPresenceHandlers` from `p2play-core/presence` (do **not** copy grace timers per game).
+
+```ts
+import {
+  attachPresenceHandlers,
+  createSeatEngine,
+  handleJoinGameSeat,
+  remapRecordKey,
+} from "p2play-core/presence";
+```
+
+- Engine: `markDisconnected` / `isDisconnected` / `remapPlayerId` / `removePlayer` (+ `remapRecordKey` for flat maps).
+- Host `useGame`: `createSeatEngine` + `attachPresenceHandlers({ onHostAction })` + `presence.dispose()`.
+- `JOIN_GAME` → `handleJoinGameSeat` (refresh if already seated; spectator late-join when applicable).
+- `attachPresenceHandlers` **chains** existing `onPeerStatusChange` (voice-safe).
+
+Guides: [Presence & Reconnect](https://github.com/gab371/p2play-core/blob/main/docs/presence-guide.md) · [API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)
+
+**Boundary**: Hub party-room auto-rejoin after F5 is optional / future work. In-game presence works with the Hub-owned `externalPeerManager` the same way as standalone.
+
+---
+
+## 6. Shared Home Lobby (`P2PlayLobby`)
 
 Standalone create/join screens MUST use `<P2PlayLobby />` from `p2play-core` (do not reimplement host/join forms). Connected-room UI (ready, spectators, deck config) remains game-specific.
 
@@ -182,7 +207,7 @@ See [lobby-guide.md](../../lobby-guide.md).
 
 ---
 
-## 6. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
+## 7. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
 
 Hub manages game selection and player gathering in its own room. Sub-games MUST NOT re-display their local home screen (username form, join code).
 
@@ -193,13 +218,13 @@ When `isEmbedded={true}` and `externalPeerManager` are provided:
 
 ---
 
-## 7. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
+## 8. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
 
 In embedded mode, WebRTC connection belongs to Hub (`externalPeerManager`). Sub-game MUST NOT destroy this connection. Exit buttons must invoke `onExit` (return to Hub) and NEVER `game.disconnect` / `peerManager.disconnect`.
 
 ---
 
-## 8. Voice Chat & Spectator Mode
+## 9. Voice Chat & Spectator Mode
 
 For games requiring voice chat or spectator features:
 - **Voice Chat**: Use `useVoiceChat`, `<VoiceChatPanel />`, and `<VoiceBubble />` from `p2play-core/voice`.
@@ -207,7 +232,7 @@ For games requiring voice chat or spectator features:
 
 ---
 
-## 9. Hub Catalog Declaration (`hub-manifest.json`)
+## 10. Hub Catalog Declaration (`hub-manifest.json`)
 
 Games **self-declare** picker metadata. Do **not** put `name` / `desc` in Hub `games.json`.
 

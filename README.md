@@ -2,7 +2,7 @@
 
 **Standalone-first P2P toolkit and unified networking engine for [P2Play](https://github.com/gab371) games.**
 
-`p2play-core` is the foundational shared library powering all games in the P2Play ecosystem (*Billard P2Play*, *Royal Bluff*, *Skull & Roses*, *Sheriff & Smugglers*). It handles serverless WebRTC transport (via PeerJS), room management, game state synchronization, text chat, P2P sound effects (SFX), Spectator mode, and spatialized WebRTC Voice Chat.
+`p2play-core` is the foundational shared library powering all games in the P2Play ecosystem (*Billard P2Play*, *Royal Bluff*, *Skull & Roses*, *Sheriff & Smugglers*). It handles serverless WebRTC transport (via PeerJS), room management, game state synchronization, text chat, P2P sound effects (SFX), Spectator mode, spatialized WebRTC Voice Chat, **session persistence**, and **presence / reconnect grace**.
 
 ---
 
@@ -11,11 +11,13 @@
 - 🚀 **Standalone-First Architecture**: Works 100% autonomously in any Vite/React game (hosting & joining rooms) **OR** in embedded mode inside **P2Play Hub** with zero WebRTC disconnection.
 - 🏠 **Shared Home Lobby (`P2PlayLobby`)**: Themed create/join UI with URL invitation deep-links, optional voice toggle, and Tailwind `classes` overrides per game.
 - 🌐 **WebRTC P2P Network (PeerJS)**: Serverless mesh/star direct peer connections without a central game server.
-- ⚛️ **`usePeer` React Hook**: Out-of-the-box abstraction handling auto-reconnect, game state sync, player actions, text chat, and P2P sound effect triggering.
+- ⚛️ **`usePeer` React Hook**: Game state sync, actions, chat, SFX, profile-aware `hostGame` / `joinGame`, and automatic `REQUEST_RECONNECT` when a local session exists for the room.
 - 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
 - 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
 - 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners).
+- 💾 **Session (`p2play-core/session`)**: `localStorage` helpers (`saveSession` / `loadSession`) for reconnect identity after F5.
 - ♻️ **Presence & Reconnect (`p2play-core/presence`)**: Shared grace timers, `REQUEST_RECONNECT` protocol, and JOIN_GAME seat policy — games only implement `remapPlayerId` business maps.
+- ❤️ **Heartbeat**: Host/client PING/PONG on PeerManager (and Hub peer manager) to surface silent disconnects.
 - 🔗 **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
 
 ---
@@ -26,10 +28,10 @@ In your React/Vite game project:
 
 ```bash
 # Via GitHub release tag
-npm install github:gab371/p2play-core#v0.3.1
+npm install github:gab371/p2play-core#v0.5.0
 
 # Or with pnpm
-pnpm add github:gab371/p2play-core#v0.3.1
+pnpm add github:gab371/p2play-core#v0.5.0
 ```
 
 ---
@@ -205,15 +207,49 @@ export function GameWithVoice() {
 
 ---
 
+## ♻️ Presence & Reconnect (`p2play-core/presence`)
+
+Host-side grace + reconnect protocol (do not copy timers per game):
+
+```ts
+import {
+  attachPresenceHandlers,
+  createSeatEngine,
+  handleJoinGameSeat,
+} from "p2play-core/presence";
+
+const presence = attachPresenceHandlers({
+  peerManager,
+  getEngine: () =>
+    createSeatEngine({
+      getPhase: () => engine.state.phase,
+      getPlayers: () => engine.state.players,
+      getSpectators: () => engine.state.spectators,
+      markDisconnected: (id) => engine.markDisconnected(id),
+      isDisconnected: (id) => engine.isDisconnected(id),
+      remapPlayerId: (o, n, p) => engine.remapPlayerId(o, n, p),
+      removePlayer: (id) => engine.removePlayer(id),
+    }),
+  onBroadcast: () => broadcastSanitizedStates(engine.state),
+  onHostAction: (_sender, msg) => {
+    /* game ACTION switch — JOIN_GAME via handleJoinGameSeat */
+  },
+});
+
+return () => presence.dispose();
+```
+
+📘 Read the **[Presence & Reconnect Guide](docs/presence-guide.md)** for engine contract, protocol, and checklist.
+
+---
+
 ## 📚 Documentation Links
 
-- 📘 **[API Reference](docs/api-reference.md)**: Complete reference (`usePeer`, lobby, Hub manifest, spectator, voice).
+- 📘 **[API Reference](docs/api-reference.md)**: Complete reference (`usePeer`, lobby, Hub manifest, spectator, voice, session, presence).
 - 🏠 **[Shared Lobby Guide](docs/lobby-guide.md)**: `P2PlayLobby` themes, classes, and URL invitations.
 - 👁️ **[Spectator Mode Guide](docs/spectator-guide.md)**: Role management and state sanitization.
 - 🎙️ **[Voice Chat Guide](docs/voice-chat-guide.md)**: WebRTC P2P mesh topology and spatial audio.
-
-
----
+- ♻️ **[Presence & Reconnect Guide](docs/presence-guide.md)**: Grace timers, `REQUEST_RECONNECT`, JOIN seat policy.
 
 ## ⚙️ Peer Dependencies
 

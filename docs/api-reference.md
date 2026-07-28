@@ -1,6 +1,6 @@
 # 📖 `p2play-core` API Reference
 
-This document provides a comprehensive reference for the `p2play-core` package, including core P2P networking, the Spectator module, and WebRTC Voice Chat.
+This document provides a comprehensive reference for the `p2play-core` package: core P2P networking, lobby, Hub manifest, Spectator, Voice, **Session**, and **Presence / Reconnect** (v0.5.0+).
 
 ---
 
@@ -51,13 +51,15 @@ The primary React hook for managing P2P connections in your components.
 | `customMessages` | `NetworkMessage[]` | Ring buffer of last 20 custom network messages. |
 | `status` | `'IDLE' \| 'CONNECTING' \| 'CONNECTED' \| 'DISCONNECTED'` | Current P2P connection status. |
 | `error` | `string \| null` | Connection or protocol error message. |
-| `hostGame(customRoomId?)` | `(customRoomId?: string \| null) => Promise<string>` | Initializes peer as host and creates room. |
-| `joinGame(roomId)` | `(roomId: string) => Promise<string>` | Joins remote host room by room code. |
+| `hostGame(customRoomId?, profile?)` | `(customRoomId?: string \| null, profile?: PeerProfile) => Promise<string>` | Initializes peer as host; optional profile saved to session. |
+| `joinGame(roomId, profile?)` | `(roomId: string, profile?: PeerProfile) => Promise<string>` | Joins room; may send `REQUEST_RECONNECT` if a session exists for that room. |
 | `sendAction(actionName, payload?)` | `(actionName: string, payload?: any) => void` | Sends game action packet to host. |
 | `sendChat(senderName, text)` | `(senderName: string, text: string) => void` | Broadcasts text chat message to room. |
 | `playSfx(sfxName, intensity?)` | `(sfxName: string, intensity?: number) => void` | Triggers P2P sound effect across all players. |
 | `disconnect()` | `() => void` | Closes P2P connections and cleans up instance. |
 | `peerManager` | `PeerManagerLike<TState>` | Underlying peer manager instance. |
+
+`PeerProfile`: `{ username?: string; avatar?: string }` — pass real values so session / reconnect keep the correct display name.
 
 ---
 
@@ -80,7 +82,13 @@ const peerManager = new PeerManager({
 - `sendToHost(type: string, payload: Record<string, unknown>): void`: Sends request packet to host.
 - `sendAudio(sfx: string, intensity?: number): void`: Sends SFX trigger event.
 - `sendChat(senderName: string, text: string): void`: Sends text chat message.
+- `startHeartbeat()` / `stopHeartbeat()`: PING/PONG liveness (detects silent disconnects → `onPeerStatusChange`).
 - `disconnect(): void`: Closes session.
+
+#### Callbacks (assignable)
+- `onStateReceived`, `onChatReceived`, `onAudioReceived`
+- `onPeerStatusChange(peerId, 'CONNECTED' | 'DISCONNECTED')` — **chain** when overwriting (voice / presence do this)
+- `hostActionHandler(senderPeerId, msg)` — host processes guest messages (`ACTION`, `REQUEST_RECONNECT`, …)
 
 ---
 
@@ -233,9 +241,36 @@ Floating voice activity bubble for player avatars on game boards.
 
 ---
 
+## 💾 Session Module (`p2play-core/session`)
+
+Persists reconnect identity in `localStorage` (per room code). Used by `usePeer` on host/join and when handling `RECONNECT_ACCEPTED`.
+
+```ts
+import {
+  saveSession,
+  loadSession,
+  clearSession,
+  createSessionToken,
+  type P2PlaySession,
+} from "p2play-core/session";
+```
+
+| Helper | Description |
+| :--- | :--- |
+| `saveSession(roomCode, session)` | Store `previousPeerId`, `username`, `avatar`, `role`, `sessionToken`, `savedAt`. |
+| `loadSession(roomCode)` | Returns `P2PlaySession \| null`. |
+| `clearSession(roomCode)` | Removes stored session. |
+| `createSessionToken()` | Random token for the local session. |
+
+Types for reconnect payloads (`RequestReconnectPayload`, `ReconnectAcceptedPayload`, …) are also exported from this entry.
+
+---
+
 ## ♻️ Presence Module (`p2play-core/presence`)
 
 Opt-in orchestration for **disconnect grace**, **REQUEST_RECONNECT**, and **JOIN_GAME seat** policy. Game engines keep business remap (`bags`, pending actions, …) behind `GameSeatEngine.remapPlayerId`.
+
+📘 Full walkthrough: **[Presence & Reconnect Guide](presence-guide.md)**.
 
 ### `attachPresenceHandlers(options)`
 
@@ -281,3 +316,4 @@ presence.dispose();
 - `handleJoinGameSeat` — refresh if already seated; else lobby `addPlayer` / mid-game `addSpectator`
 - `remapRecordKey(record, oldId, newId)` — flat map remap for engines
 - `GraceRegistry` — low-level timer registry (usually via `attachPresenceHandlers`)
+- `GameSeatEngine` — TypeScript contract for seat operations
