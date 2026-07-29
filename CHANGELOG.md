@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- `VoiceChatPanel`: optional `draggable` (+ `dragStorageKey`) — Android-style floating bubble (drag + snap to left/right edge, position persisted).
+- New `useFloatingDrag` helper exported from `p2play-core/voice`.
+
 ## 0.6.0
 
 - New entry **`p2play-core/ui`**: shadcn-style primitives (`Button`, `Badge`, `Card`, `Dialog`, `Input`, `Slider`, `Avatar`, `Popover`, `Tooltip`, `Toggle`, `ScrollArea`, …) + shared **`SoundToggle`** (`soundManager` injected; key `p2play:sound:muted`).

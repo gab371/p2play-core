@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Mic, MicOff, Headphones, ChevronLeft } from "lucide-react";
 import type { PeerManagerLike } from "../../peer/PeerManagerLike";
 import { useVoiceChat } from "../useVoiceChat";
+import { useFloatingDrag } from "../useFloatingDrag";
 import { VoiceChatMinimized } from "./VoiceChatMinimized";
 import { VoiceParticipantRow } from "./VoiceParticipantRow";
 import { Button } from "../../ui/button";
@@ -16,6 +17,13 @@ export interface VoiceChatPanelProps {
   collapsible?: boolean;
   defaultMinimized?: boolean;
   className?: string;
+  /**
+   * Android-style floating bubble: drag freely, snap to left/right edge.
+   * When true, the panel is `position: fixed` — do not wrap in another fixed box.
+   */
+  draggable?: boolean;
+  /** localStorage key for bubble position (only when `draggable`). */
+  dragStorageKey?: string;
 }
 
 export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
@@ -26,8 +34,16 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
   collapsible = true,
   defaultMinimized = true,
   className = "",
+  draggable = false,
+  dragStorageKey = "p2play-voice-bubble-pos",
 }) => {
   const [isMinimized, setIsMinimized] = useState(defaultMinimized);
+  const float = useFloatingDrag({
+    enabled: draggable,
+    storageKey: dragStorageKey,
+    defaultPos: { x: 16, y: 96 },
+    snapToEdge: true,
+  });
   const voice = useVoiceChat({ peerManager, username, avatar });
   const {
     active,
@@ -59,11 +75,20 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   if (isMinimized) {
     return (
-      <VoiceChatMinimized
-        participants={participants}
-        className={className}
-        onExpand={() => setIsMinimized(false)}
-      />
+      <div
+        ref={float.rootRef}
+        style={float.style}
+        className={cn(draggable && "select-none", className)}
+        {...float.pointerProps}
+      >
+        <VoiceChatMinimized
+          participants={participants}
+          onExpand={() => {
+            if (float.consumeDragClick()) return;
+            setIsMinimized(false);
+          }}
+        />
+      </div>
     );
   }
 
@@ -71,10 +96,14 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
 
   return (
     <div
+      ref={float.rootRef}
+      style={float.style}
       className={cn(
         "flex w-[300px] flex-col overflow-hidden rounded-2xl border border-white/12 bg-zinc-950/95 text-zinc-100 shadow-[0_25px_60px_rgba(0,0,0,0.85)] backdrop-blur-xl",
+        draggable && "select-none",
         className,
       )}
+      {...float.pointerProps}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 border-b border-white/10 bg-zinc-900/80 px-3.5 py-3">
