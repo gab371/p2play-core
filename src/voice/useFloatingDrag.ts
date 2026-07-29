@@ -18,7 +18,11 @@ export interface UseFloatingDragOptions {
   /** Snap to left/right edge on release (chat-head style). Default true. */
   snapToEdge?: boolean;
   edgePadding?: number;
+  /** Fired on pointer-up when the gesture was a tap (no drag). */
+  onTap?: () => void;
 }
+
+const DRAG_THRESHOLD_PX = 8;
 
 function readStored(key: string | undefined, fallback: FloatingPos): FloatingPos {
   if (!key || typeof window === "undefined") return fallback;
@@ -53,6 +57,7 @@ export function useFloatingDrag({
   defaultPos = { x: 16, y: 96 },
   snapToEdge = true,
   edgePadding = 12,
+  onTap,
 }: UseFloatingDragOptions = {}) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<FloatingPos>(() =>
@@ -61,8 +66,12 @@ export function useFloatingDrag({
   const posRef = useRef(pos);
   posRef.current = pos;
   const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
+  const pressActive = useRef(false);
   const dragMoved = useRef(false);
   const origin = useRef({ pointerX: 0, pointerY: 0, startX: 0, startY: 0 });
+  const onTapRef = useRef(onTap);
+  onTapRef.current = onTap;
 
   const persist = useCallback(
     (next: FloatingPos) => {
@@ -101,26 +110,38 @@ export function useFloatingDrag({
       if (target.closest("button, a, input, select, textarea, [data-no-drag]")) {
         return;
       }
+      pressActive.current = true;
       dragMoved.current = false;
+      draggingRef.current = false;
       origin.current = {
         pointerX: e.clientX,
         pointerY: e.clientY,
         startX: posRef.current.x,
         startY: posRef.current.y,
       };
-      e.currentTarget.setPointerCapture(e.pointerId);
-      setDragging(true);
+      // Do NOT setPointerCapture yet — capture kills click-to-open.
     },
     [enabled],
   );
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!dragging) return;
+      if (!enabled || !pressActive.current) return;
       const dx = e.clientX - origin.current.pointerX;
       const dy = e.clientY - origin.current.pointerY;
-      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) dragMoved.current = true;
-      if (!dragMoved.current) return;
+      if (!dragMoved.current) {
+        if (Math.abs(dx) <= DRAG_THRESHOLD_PX && Math.abs(dy) <= DRAG_THRESHOLD_PX) {
+          return;
+        }
+        dragMoved.current = true;
+        draggingRef.current = true;
+        setDragging(true);
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
       e.preventDefault();
       const next = clampPos(
         {
@@ -133,41 +154,43 @@ export function useFloatingDrag({
       posRef.current = next;
       setPos(next);
     },
-    [dragging, edgePadding, measure],
+    [edgePadding, enabled, measure],
   );
 
   const endDrag = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!dragging) return;
-      setDragging(false);
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
-      if (!dragMoved.current) return;
+      if (!enabled || !pressActive.current) return;
+      pressActive.current = false;
+      const moved = dragMoved.current;
 
-      let next = clampPos(posRef.current, measure(), edgePadding);
-      if (snapToEdge) {
-        const { w } = measure();
-        const mid = next.x + w / 2;
-        next = {
-          x: mid < window.innerWidth / 2 ? edgePadding : window.innerWidth - w - edgePadding,
-          y: next.y,
-        };
-        next = clampPos(next, measure(), edgePadding);
+      if (draggingRef.current) {
+        draggingRef.current = false;
+        setDragging(false);
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        let next = clampPos(posRef.current, measure(), edgePadding);
+        if (snapToEdge) {
+          const { w } = measure();
+          const mid = next.x + w / 2;
+          next = {
+            x: mid < window.innerWidth / 2 ? edgePadding : window.innerWidth - w - edgePadding,
+            y: next.y,
+          };
+          next = clampPos(next, measure(), edgePadding);
+        }
+        persist(next);
       }
-      persist(next);
+
+      if (!moved) {
+        onTapRef.current?.();
+      }
+      dragMoved.current = false;
     },
-    [dragging, edgePadding, measure, persist, snapToEdge],
+    [edgePadding, enabled, measure, persist, snapToEdge],
   );
-
-  /** True if the last gesture was a drag (suppress click-to-expand). */
-  const consumeDragClick = useCallback(() => {
-    if (!dragMoved.current) return false;
-    dragMoved.current = false;
-    return true;
-  }, []);
 
   return {
     rootRef,
@@ -190,6 +213,5 @@ export function useFloatingDrag({
           onPointerCancel: endDrag,
         }
       : {},
-    consumeDragClick,
   };
 }

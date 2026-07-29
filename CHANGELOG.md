@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+- `useFloatingDrag`: delay pointer capture until drag threshold; `onTap` opens the panel on click (fixes mute panel not opening when `draggable`).
+
 ## 0.6.1
 
 - `VoiceChatPanel`: optional `draggable` (+ `dragStorageKey`) — Android-style floating bubble (drag + snap to left/right edge, position persisted).

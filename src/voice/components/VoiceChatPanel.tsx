@@ -43,6 +43,7 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
     storageKey: dragStorageKey,
     defaultPos: { x: 16, y: 96 },
     snapToEdge: true,
+    onTap: isMinimized ? () => setIsMinimized(false) : undefined,
   });
   const voice = useVoiceChat({ peerManager, username, avatar });
   const {
@@ -83,9 +84,9 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
       >
         <VoiceChatMinimized
           participants={participants}
+          /* Expand is handled by floating onTap when draggable (click survives). */
           onExpand={() => {
-            if (float.consumeDragClick()) return;
-            setIsMinimized(false);
+            if (!draggable) setIsMinimized(false);
           }}
         />
       </div>
