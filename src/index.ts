@@ -18,6 +18,8 @@ export { usePeer } from "./react/usePeer";
 export type { UsePeerOptions, PeerStatus } from "./react/usePeer";
 export { P2PlayLobby, LOBBY_THEMES } from "./react/Lobby";
 export type { P2PlayLobbyProps, P2PlayLobbyTheme } from "./react/Lobby";
+export { CopyRoomLinkButton, RoomCodeBadge } from "./react/RoomCodeBadge";
+export type { CopyRoomLinkButtonProps, RoomCodeBadgeProps } from "./react/RoomCodeBadge";
 export {
   HUB_GAME_MANIFEST_FILENAME,
   defineHubGameManifest,

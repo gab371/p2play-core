@@ -1,5 +1,14 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Pin, PinOff } from "lucide-react";
 import type { TextChatPanelProps } from "./types";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { cn } from "../ui/utils";
+import { P2PLAY_PANEL_SCROLLBAR_CSS, scrollbarAccentStyle } from "./scrollbarStyles";
+import { PIN_IDLE_CLASS, pinLockedClass } from "./pinStyles";
+
+/** Newest-at-bottom chat: stick to bottom unless the reader locks / scrolls up. */
+const NEAR_BOTTOM_PX = 48;
 
 export const TextChatPanel: React.FC<TextChatPanelProps> = ({
   messages,
@@ -10,15 +19,37 @@ export const TextChatPanel: React.FC<TextChatPanelProps> = ({
   className = "",
   style = {},
   maxHeight = "280px",
+  scrollbarAccent = "zinc",
 }) => {
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [scrollLocked, setScrollLocked] = useState(false);
+  const prevCountRef = useRef(messages.length);
+
+  const scrollToNewest = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const prev = prevCountRef.current;
+    prevCountRef.current = messages.length;
+    if (messages.length <= prev) return;
+    if (scrollLocked) return;
+    scrollToNewest();
+  }, [messages, scrollLocked, scrollToNewest]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const awayFromBottom = distFromBottom > NEAR_BOTTOM_PX;
+    if (awayFromBottom && !scrollLocked) {
+      setScrollLocked(true);
+    } else if (!awayFromBottom && scrollLocked) {
+      setScrollLocked(false);
     }
-  }, [messages]);
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -30,129 +61,85 @@ export const TextChatPanel: React.FC<TextChatPanelProps> = ({
 
   return (
     <div
-      className={className || "flex flex-col bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 text-zinc-100 text-sm"}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: className ? undefined : "rgba(24, 24, 27, 0.8)",
-        border: className ? undefined : "1px solid #27272a",
-        borderRadius: className ? undefined : "16px",
-        padding: className ? undefined : "16px",
-        color: className ? undefined : "#f4f4f5",
-        fontSize: className ? undefined : "14px",
-        boxSizing: "border-box",
-        ...style,
-      }}
-    >
-      {title && (
-        <div
-          className="font-bold text-xs uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-2"
-          style={{
-            fontWeight: 700,
-            fontSize: "12px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: className ? undefined : "#a1a1aa",
-            marginBottom: "12px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span>💬</span>
-          <span>{title}</span>
-        </div>
+      className={cn(
+        !className &&
+          "flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-sm text-zinc-100",
+        className,
       )}
+      style={style}
+    >
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+        {title ? (
+          <div className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-90">
+            <span aria-hidden>💬</span>
+            <span className="truncate">{title}</span>
+          </div>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setScrollLocked((v) => {
+              const next = !v;
+              if (!next) queueMicrotask(scrollToNewest);
+              return next;
+            });
+          }}
+          className={cn(
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-xl border transition-colors",
+            scrollLocked ? pinLockedClass(scrollbarAccent) : PIN_IDLE_CLASS,
+          )}
+          title={
+            scrollLocked
+              ? "Déverrouiller le scroll (suivre les nouveaux messages)"
+              : "Verrouiller le scroll (lecture sans saut)"
+          }
+          aria-pressed={scrollLocked}
+          aria-label={scrollLocked ? "Déverrouiller le scroll" : "Verrouiller le scroll"}
+        >
+          {scrollLocked ? <Pin className="size-3.5" /> : <PinOff className="size-3.5 opacity-70" />}
+        </button>
+      </div>
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1"
-        style={{
-          flex: 1,
-          maxHeight: maxHeight,
-          overflowY: "auto",
-          marginBottom: "12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        }}
+        onScroll={handleScroll}
+        className="p2play-panel-scroll mb-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1.5"
+        style={{ maxHeight, ...scrollbarAccentStyle(scrollbarAccent) }}
       >
         {messages.length === 0 ? (
-          <div
-            className="text-xs text-zinc-500 italic text-center py-4"
-            style={{ fontSize: "12px", color: className ? undefined : "#71717a", fontStyle: "italic", textAlign: "center", padding: "16px 0" }}
-          >
-            {emptyLabel}
-          </div>
+          <p className="py-4 text-center text-xs italic opacity-50">{emptyLabel}</p>
         ) : (
           messages.map((msg, index) => (
             <div
               key={index}
-              className="p-2 rounded-xl bg-zinc-950/60 border border-zinc-800/40 text-xs"
-              style={{
-                padding: "8px 12px",
-                borderRadius: "12px",
-                backgroundColor: className ? undefined : "rgba(9, 9, 11, 0.6)",
-                border: className ? undefined : "1px solid rgba(39, 39, 42, 0.4)",
-                fontSize: "12px",
-              }}
+              className="rounded-xl border border-current/10 bg-black/20 p-2 text-xs"
             >
-              <div
-                className="flex items-center justify-between gap-2 mb-1"
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "4px" }}
-              >
-                <span className="font-bold text-violet-300 truncate" style={{ fontWeight: 700, color: className ? undefined : "#c4b5fd" }}>
-                  {msg.sender}
-                </span>
-                <span className="text-[10px] text-zinc-500 font-mono" style={{ fontSize: "10px", color: className ? undefined : "#71717a", fontFamily: "monospace" }}>
-                  {msg.time}
-                </span>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="truncate font-bold opacity-90">{msg.sender}</span>
+                <span className="shrink-0 font-mono text-[10px] opacity-50">{msg.time}</span>
               </div>
-              <p className="text-zinc-200 break-words margin-0" style={{ color: className ? undefined : "#e4e4e7", margin: 0, wordBreak: "break-word" }}>
-                {msg.text}
-              </p>
+              <p className="m-0 break-words opacity-90">{msg.text}</p>
             </div>
           ))
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2" style={{ display: "flex", gap: "8px" }}>
-        <input
+      <form onSubmit={handleSubmit} className="flex shrink-0 gap-2">
+        <Input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-violet-500"
-          style={{
-            flex: 1,
-            backgroundColor: className ? undefined : "#09090b",
-            border: className ? undefined : "1px solid #27272a",
-            borderRadius: "12px",
-            padding: "8px 12px",
-            fontSize: "12px",
-            color: className ? undefined : "#f4f4f5",
-            outline: "none",
-          }}
+          className="h-8 flex-1 rounded-xl border-current/20 bg-black/30 text-xs"
         />
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition-all"
-          style={{
-            padding: "8px 16px",
-            backgroundColor: className ? undefined : "#7c3aed",
-            color: "#ffffff",
-            fontWeight: 700,
-            fontSize: "12px",
-            borderRadius: "12px",
-            border: "none",
-            cursor: !text.trim() ? "not-allowed" : "pointer",
-            opacity: !text.trim() ? 0.4 : 1,
-          }}
-        >
+        <Button type="submit" size="sm" disabled={!text.trim()} className="rounded-xl">
           Envoyer
-        </button>
+        </Button>
       </form>
+
+      <style>{P2PLAY_PANEL_SCROLLBAR_CSS}</style>
     </div>
   );
 };

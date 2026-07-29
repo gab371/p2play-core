@@ -1,6 +1,6 @@
 {
   "name": "p2play-core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Standalone-first P2P toolkit for P2Play games (PeerJS transport, usePeer, optional spectator)",
   "repository": {
     "type": "git",
@@ -37,6 +37,10 @@
     "./presence": {
       "types": "./dist/presence/index.d.ts",
       "import": "./dist/presence/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
     }
   },
   "files": [
@@ -47,6 +51,14 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.25.0",
+    "radix-ui": "^1.6.2",
+    "tailwind-merge": "^3.6.0",
+    "tslib": "^2.8.1"
   },
   "peerDependencies": {
     "peerjs": "^1.5.0",

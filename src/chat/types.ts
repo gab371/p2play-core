@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import type { ChatMessage } from "../peer/types";
 import type { PeerManagerLike } from "../peer/PeerManagerLike";
+import type { PanelScrollbarAccent } from "./scrollbarStyles";
+
+export type { PanelScrollbarAccent };
 
 export interface JournalEntry {
   id: string;
@@ -31,6 +34,8 @@ export interface TextChatPanelProps {
   className?: string;
   style?: CSSProperties;
   maxHeight?: string;
+  /** Scrollbar accent matched to the game theme (default: zinc). */
+  scrollbarAccent?: PanelScrollbarAccent;
 }
 
 export interface JournalPanelProps {
@@ -40,7 +45,13 @@ export interface JournalPanelProps {
   className?: string;
   style?: CSSProperties;
   maxHeight?: string;
+  /** Optional per-type class overrides (merged on top of the accent palette). */
   typeClassNames?: Record<string, string>;
+  /**
+   * Theme accent shared with scrollbar / pin.
+   * Also selects the default event-type color palette for this game (default: zinc).
+   */
+  scrollbarAccent?: PanelScrollbarAccent;
 }
 
 export type ChatHistorySyncMessage = {

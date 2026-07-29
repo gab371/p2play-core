@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl, subscribeRoomUrlChanges } from "../url";
 import { loadSession } from "../session/helpers";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { cn } from "../ui/utils";
 
 export interface P2PlayLobbyTheme {
   primaryColor: string;
@@ -156,6 +159,64 @@ export interface P2PlayLobbyProps {
 }
 
 const DEFAULT_AVATARS = ["👑", "🤠", "🧙‍♂️", "👨‍🍳", "👰‍♀️", "🤵‍♂️", "🌵", "🐎"];
+
+/** Strip shadcn Input chrome so game `classes.input` / theme styles can win. */
+const LOBBY_INPUT_RESET =
+  "h-auto min-h-0 rounded-none border-0 bg-transparent px-0 py-0 shadow-none md:text-sm " +
+  "focus-visible:border-transparent focus-visible:ring-0 " +
+  "dark:bg-transparent dark:disabled:bg-transparent";
+
+/** Strip shadcn Button chrome so game `classes.*Button` / theme styles can win. */
+const LOBBY_BUTTON_RESET =
+  "h-auto min-h-0 gap-0 rounded-none border-0 bg-transparent px-0 py-0 shadow-none " +
+  "hover:bg-transparent hover:text-inherit dark:hover:bg-transparent " +
+  "focus-visible:border-transparent focus-visible:ring-0";
+
+/** Native switch — avoids shadcn Button flex centering breaking the thumb position. */
+function LobbyVoiceToggle({
+  enabled,
+  onToggle,
+  primaryColor,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  primaryColor: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={onToggle}
+      className="relative shrink-0"
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 9999,
+        backgroundColor: enabled ? primaryColor : "#3f3f46",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        transition: "background-color 0.2s ease",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 4,
+          left: enabled ? 24 : 4,
+          width: 16,
+          height: 16,
+          borderRadius: 9999,
+          backgroundColor: "#ffffff",
+          transition: "left 0.2s ease",
+          pointerEvents: "none",
+        }}
+      />
+    </button>
+  );
+}
 
 export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   title = "P2PLAY",
@@ -413,9 +474,9 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               </span>
             )}
           </div>
-          <input
+          <Input
             type="text"
-            className={classes.input}
+            className={cn(classes.input && LOBBY_INPUT_RESET, classes.input)}
             placeholder={usernamePlaceholder}
             value={username}
             onChange={(e) => setUsername(e.target.value.slice(0, maxUsernameLength))}
@@ -484,35 +545,48 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                     : {}
                 }
               >
-                {avatars.map((av) => (
-                  <button
-                    key={av}
-                    type="button"
-                    onClick={() => setSelectedAvatar(av)}
-                    disabled={isLoading}
-                    className={selectedAvatar === av ? classes.avatarItemSelected || classes.avatarItem : classes.avatarItem}
-                    style={
-                      !classes.avatarItem
-                        ? {
-                            fontSize: "24px",
-                            padding: "6px",
-                            borderRadius: "12px",
-                            border: selectedAvatar === av ? `1px solid ${activeTheme.primaryColor}` : "none",
-                            backgroundColor: selectedAvatar === av ? "rgba(245, 158, 11, 0.2)" : "transparent",
-                            transform: selectedAvatar === av ? "scale(1.1)" : "scale(1)",
-                            transition: "all 0.15s ease",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            aspectRatio: "1/1",
-                          }
-                        : {}
-                    }
-                  >
-                    {av}
-                  </button>
-                ))}
+                {avatars.map((av) => {
+                  const selected = selectedAvatar === av;
+                  const themedClass = selected
+                    ? classes.avatarItemSelected || classes.avatarItem
+                    : classes.avatarItem;
+
+                  return (
+                    <Button
+                      key={av}
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={isLoading}
+                      onClick={() => setSelectedAvatar(av)}
+                      aria-pressed={selected}
+                      className={cn(
+                        // Reset shadcn icon button chrome so game/theme styles can win
+                        "size-auto h-auto w-auto min-h-0 min-w-0 rounded-xl border-2 border-transparent bg-transparent p-1.5 text-2xl shadow-none",
+                        "hover:bg-transparent hover:text-inherit dark:hover:bg-transparent",
+                        !themedClass && selected && "scale-110",
+                        !themedClass && !selected && "hover:bg-black/10",
+                        themedClass,
+                      )}
+                      style={
+                        !themedClass
+                          ? {
+                              borderColor: selected ? activeTheme.primaryColor : "transparent",
+                              backgroundColor: selected
+                                ? "rgba(245, 158, 11, 0.2)"
+                                : "transparent",
+                              boxShadow: selected
+                                ? `0 0 12px ${activeTheme.primaryColor}55`
+                                : "none",
+                              transform: selected ? "scale(1.1)" : "scale(1)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {av}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           )
@@ -592,10 +666,14 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               Vous avez été invité à rejoindre ce salon. Choisissez votre pseudo et votre avatar ci-dessus puis rejoignez la partie !
             </p>
 
-            <button
+            <Button
               onClick={handleJoin}
               disabled={isCreateDisabled}
-              className={`${classes.createButton || ''} disabled:opacity-40 disabled:cursor-not-allowed`}
+              className={cn(
+                classes.createButton && LOBBY_BUTTON_RESET,
+                classes.createButton,
+                "disabled:opacity-40 disabled:cursor-not-allowed",
+              )}
               style={
                 !classes.createButton
                   ? {
@@ -615,9 +693,9 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               }
             >
               {isLoading ? "Connexion..." : "Rejoindre le salon"}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={handleClearUrlCode}
               style={{
@@ -632,16 +710,20 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               }}
             >
               ← Créer un salon ou entrer un autre code
-            </button>
+            </Button>
           </div>
         ) : (
           <div className={classes.actionGroup} style={!classes.actionGroup ? { display: "flex", flexDirection: "column", gap: "12px" } : {}}>
             {/* Host section */}
             {compactHostSection ? (
-              <button
+              <Button
                 onClick={handleCreate}
                 disabled={isCreateDisabled}
-                className={`${classes.createButton || ''} disabled:opacity-40 disabled:cursor-not-allowed`}
+                className={cn(
+                  classes.createButton && LOBBY_BUTTON_RESET,
+                  classes.createButton,
+                  "disabled:opacity-40 disabled:cursor-not-allowed",
+                )}
                 style={
                   !classes.createButton
                     ? {
@@ -662,7 +744,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                 }
               >
                 {isLoading ? "Création..." : createButtonText}
-              </button>
+              </Button>
             ) : (
               <div
                 style={{
@@ -702,40 +784,22 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setEnableVoice(!enableVoice)}
-                      style={{
-                        width: "44px",
-                        height: "24px",
-                        borderRadius: "9999px",
-                        backgroundColor: enableVoice ? activeTheme.primaryColor : "#3f3f46",
-                        border: "none",
-                        position: "relative",
-                        cursor: "pointer",
-                        padding: "2px",
-                        transition: "background-color 0.2s ease",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "16px",
-                          height: "16px",
-                          borderRadius: "9999px",
-                          backgroundColor: "#ffffff",
-                          transform: enableVoice ? "translateX(20px)" : "translateX(0)",
-                          transition: "transform 0.2s ease",
-                        }}
-                      />
-                    </button>
+                    <LobbyVoiceToggle
+                      enabled={enableVoice}
+                      onToggle={() => setEnableVoice(!enableVoice)}
+                      primaryColor={activeTheme.primaryColor}
+                    />
                   </div>
                 )}
 
-                <button
+                <Button
                   onClick={handleCreate}
                   disabled={isCreateDisabled}
-                  className={`${classes.createButton || ''} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={cn(
+                    classes.createButton && LOBBY_BUTTON_RESET,
+                    classes.createButton,
+                    "disabled:opacity-40 disabled:cursor-not-allowed",
+                  )}
                   style={
                     !classes.createButton
                       ? {
@@ -755,7 +819,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                   }
                 >
                   {isLoading ? "Création..." : createButtonText}
-                </button>
+                </Button>
               </div>
             )}
 
@@ -810,9 +874,9 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
 
                 {joinLayout === "side-by-side" ? (
                   <div className={classes.joinGroup} style={!classes.joinGroup ? { display: "flex", gap: "8px" } : {}}>
-                    <input
+                    <Input
                       type="text"
-                      className={classes.joinInput}
+                      className={cn(classes.joinInput && LOBBY_INPUT_RESET, classes.joinInput)}
                       placeholder={joinCodePlaceholder}
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -839,10 +903,14 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                           : {}
                       }
                     />
-                    <button
+                    <Button
                       onClick={handleJoin}
                       disabled={isJoinDisabled}
-                      className={`${classes.joinButton || ''} disabled:opacity-40 disabled:cursor-not-allowed`}
+                      className={cn(
+                        classes.joinButton && LOBBY_BUTTON_RESET,
+                        classes.joinButton,
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                      )}
                       style={
                         !classes.joinButton
                           ? {
@@ -863,12 +931,12 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                       }
                     >
                       {joinButtonText}
-                    </button>
+                    </Button>
                   </div>
                 ) : (
-                  <input
+                  <Input
                     type="text"
-                    className={classes.joinInput}
+                    className={cn(classes.joinInput && LOBBY_INPUT_RESET, classes.joinInput)}
                     placeholder={joinCodePlaceholder}
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -898,10 +966,14 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
               </div>
 
               {joinLayout === "stacked" && (
-                <button
+                <Button
                   onClick={handleJoin}
                   disabled={isJoinDisabled}
-                  className={`${classes.joinButton || ''} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={cn(
+                    classes.joinButton && LOBBY_BUTTON_RESET,
+                    classes.joinButton,
+                    "disabled:opacity-40 disabled:cursor-not-allowed",
+                  )}
                   style={
                     !classes.joinButton
                       ? {
@@ -921,7 +993,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                   }
                 >
                   {joinButtonText}
-                </button>
+                </Button>
               )}
             </div>
           </div>

@@ -13,6 +13,7 @@
 - 🌐 **WebRTC P2P Network (PeerJS)**: Serverless mesh/star direct peer connections without a central game server.
 - ⚛️ **`usePeer` React Hook**: Game state sync, actions, chat, SFX, profile-aware `hostGame` / `joinGame`, and automatic `REQUEST_RECONNECT` when a local session exists for the room.
 - 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
+- 🎨 **UI primitives (`p2play-core/ui`)**: Shared shadcn-style components (`Button`, `Badge`, `Dialog`, …) and `SoundToggle` for Hub + games (apps provide CSS variables + Tailwind content scan).
 - 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
 - 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners).
 - 💾 **Session (`p2play-core/session`)**: `localStorage` helpers (`saveSession` / `loadSession`) for reconnect identity after F5.
@@ -28,10 +29,10 @@ In your React/Vite game project:
 
 ```bash
 # Via GitHub release tag
-npm install github:gab371/p2play-core#v0.5.0
+npm install github:gab371/p2play-core#v0.6.0
 
 # Or with pnpm
-pnpm add github:gab371/p2play-core#v0.5.0
+pnpm add github:gab371/p2play-core#v0.6.0
 ```
 
 ---

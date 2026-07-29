@@ -12,7 +12,7 @@ This skill defines the coding standards, architectural patterns, and code struct
 To prevent technical debt, keep components readable, and guarantee seamless game integration inside the P2Play Hub without iFrames, we enforce primary rules:
 1. **File Length Limits**: Files must remain under 300 lines of code. Files exceeding this threshold must be refactored and modularized.
 2. **Decoupled Architecture (Separation of Concerns)**: Absolute separation between Core Domain (pure game logic, rules, types), Network/Infrastructure (`p2play-core` connection protocol), and Application/UI (React components and hooks).
-3. **Unified Network & Capabilities (`p2play-core`)**: All networking, WebRTC peer management, spectator roles, voice chat, session persistence, and presence/reconnect MUST rely on the [`p2play-core`](https://github.com/gab371/p2play-core) shared package (≥ **v0.5.0**).
+3. **Unified Network & Capabilities (`p2play-core`)**: All networking, WebRTC peer management, spectator roles, voice chat, session persistence, presence/reconnect, and shared UI chrome (`p2play-core/ui`, `SoundToggle`) MUST rely on the [`p2play-core`](https://github.com/gab371/p2play-core) shared package (≥ **v0.6.0**).
 4. **Single Responsibility & Composition**: React components and hooks should focus on a single job, delegating layout and state using compound components, custom hooks, and composition patterns.
 5. **Hub Handover & Direct Bypass**: Games integrated into the P2Play Hub must support dual builds (standalone HTML vs lib ES module), synchronous `PeerManagerLike` handover, full-screen canvas mounting, bypass of the local home screen (preserving pre-game config lobbies when applicable), and dual emote packs.
 
