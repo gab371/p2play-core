@@ -19,7 +19,7 @@
 - 💾 **Session (`p2play-core/session`)**: `localStorage` helpers (`saveSession` / `loadSession`) for reconnect identity after F5.
 - ♻️ **Presence & Reconnect (`p2play-core/presence`)**: Shared grace timers, `REQUEST_RECONNECT` protocol, and JOIN_GAME seat policy — games only implement `remapPlayerId` business maps.
 - ❤️ **Heartbeat**: Host/client PING/PONG on PeerManager (and Hub peer manager) to surface silent disconnects.
-- 🔗 **URL Room Sharing**: Automatic parsing and generation of shareable room codes and invitation URLs (`?room=ABCDE`).
+- 🔗 **URL Room Sharing**: Shareable room codes / invitation URLs (`?room=` / hash routes) plus UI helpers `CopyRoomLinkButton` and `RoomCodeBadge` (icon-only copy next to the code).
 
 ---
 

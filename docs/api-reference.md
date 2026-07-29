@@ -1,6 +1,6 @@
 # 📖 `p2play-core` API Reference
 
-This document provides a comprehensive reference for the `p2play-core` package: core P2P networking, lobby, Hub manifest, Spectator, Voice, **Session**, and **Presence / Reconnect** (v0.5.0+).
+This document provides a comprehensive reference for the `p2play-core` package: core P2P networking, lobby, Hub manifest, Spectator, Voice, Session, Presence / Reconnect, chat / journal, and room-link UI (v0.6.0+).
 
 ---
 
@@ -9,10 +9,19 @@ This document provides a comprehensive reference for the `p2play-core` package: 
 `p2play-core` provides modular entry points:
 
 ```ts
-import { PeerManager, usePeer, P2PlayLobby, LOBBY_THEMES, defineHubGameManifest } from 'p2play-core';
+import {
+  PeerManager,
+  usePeer,
+  P2PlayLobby,
+  LOBBY_THEMES,
+  defineHubGameManifest,
+  CopyRoomLinkButton,
+  RoomCodeBadge,
+} from 'p2play-core';
 import { useSpectatorRole, isSpectator } from 'p2play-core/spectator';
 import { useVoiceChat, VoiceChatPanel, VoiceBubble } from 'p2play-core/voice';
 import { copyRoomUrlToClipboard, extractRoomCodeFromUrl } from 'p2play-core/url';
+import { TextChatPanel, JournalPanel } from 'p2play-core/chat';
 import { loadSession, saveSession } from 'p2play-core/session';
 import {
   attachPresenceHandlers,
@@ -129,6 +138,15 @@ import { P2PlayLobby } from 'p2play-core';
 | `onCreateRoom` / `onJoinRoom` | callbacks | Alternate API with generated room code on create. |
 
 📘 See **[Shared Lobby Guide](lobby-guide.md)** for theming and Hub vs game patterns.
+
+### 4. Room URL Copy UI (`CopyRoomLinkButton` / `RoomCodeBadge`)
+
+Icon-only controls that call `copyRoomUrlToClipboard` — do not reimplement a text “Copier le lien” button.
+
+| Component | Use |
+| :--- | :--- |
+| `CopyRoomLinkButton` | Next to a room code in lobbies / Hub header (`id` optional for E2E, e.g. `lobby-copy-btn`). |
+| `RoomCodeBadge` | In-game header pill: `Salon : CODE` + copy icon (`label`, `accentClassName`). |
 
 ---
 

@@ -2,7 +2,7 @@
 
 The presence module orchestrates **disconnect grace**, **REQUEST_RECONNECT**, and **JOIN_GAME seat** policy so each game does not copy the same ~50 lines of timers / protocol. Game engines keep **business remap** (bags, pending actions, shooter id, …) behind `remapPlayerId`.
 
-Requires **`p2play-core` ≥ v0.5.0**.
+Requires **`p2play-core` ≥ v0.5.0** (current ecosystem pin: **v0.6.0**).
 
 ---
 
@@ -134,7 +134,7 @@ After remap, a subsequent `JOIN_GAME` for the **new** peer id must **refresh ide
 1. Engine: mark / isDisconnected / remap / remove (+ `remapRecordKey` for maps).
 2. Host `useGame`: `createSeatEngine` + `attachPresenceHandlers` + `presence.dispose()`.
 3. `JOIN_GAME` → `handleJoinGameSeat`.
-4. Depend on `github:gab371/p2play-core#v0.5.0` (or newer).
+4. Depend on `github:gab371/p2play-core#v0.6.0` (or newer).
 5. Smoke: F5 guest mid-game → disconnected badge → reconnect ≤ 60s → actions OK; lobby disconnect → immediate remove.
 
 ---

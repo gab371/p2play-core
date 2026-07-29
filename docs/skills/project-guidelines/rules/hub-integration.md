@@ -10,9 +10,11 @@ All games in the P2Play ecosystem MUST declare `p2play-core` dependency in `pack
 
 ```json
 "dependencies": {
-  "p2play-core": "github:gab371/p2play-core#v0.5.0"
+  "p2play-core": "github:gab371/p2play-core#v0.6.0"
 }
 ```
+
+Use `file:../p2play-core` only for local monorepo iteration; switch back to the GitHub tag before release. With either pin, keep Vite `resolve.dedupe: ["react", "react-dom"]`.
 
 Reference Documentation:
 - 📘 **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
@@ -203,11 +205,46 @@ import { P2PlayLobby } from "p2play-core";
 />
 ```
 
-See [lobby-guide.md](../../lobby-guide.md).
+See [lobby-guide.md](https://github.com/gab371/p2play-core/blob/main/docs/lobby-guide.md).
+
+When styling lobby inputs/buttons against shadcn defaults, pass explicit `classes` resets (background, height, border) so theme tokens win over `dark:bg-input/30` / `h-8` defaults from `p2play-core/ui`.
 
 ---
 
-## 7. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
+## 7. Room URL Copy UI (`RoomCodeBadge` / `CopyRoomLinkButton`)
+
+Do **not** ship a text “Copier le lien” button. Use shared controls from `p2play-core`:
+
+```tsx
+import { CopyRoomLinkButton, RoomCodeBadge } from "p2play-core";
+
+// Connected lobby / Hub header: icon next to the code
+<CopyRoomLinkButton code={hostPeerId} id="lobby-copy-btn" />
+
+// In-game header: code + copy icon in one pill
+<RoomCodeBadge code={hostPeerId} label="Salon" accentClassName="text-amber-400" />
+```
+
+Both call `copyRoomUrlToClipboard` and expose accessible labels (`Copier le lien d'invitation` → `Lien copié`).
+
+---
+
+## 8. Text Chat & Journal (`p2play-core/chat`)
+
+Prefer shared panels over per-game chat shells:
+
+```tsx
+import { TextChatPanel, JournalPanel } from "p2play-core/chat";
+
+<JournalPanel entries={journal} scrollbarAccent="amber" />
+<TextChatPanel /* … */ scrollbarAccent="amber" />
+```
+
+`scrollbarAccent` drives scrollbar + default journal event color palettes (`journalEventStyles`). Override with `typeClassNames` only when a game needs custom event types.
+
+---
+
+## 9. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
 
 Hub manages game selection and player gathering in its own room. Sub-games MUST NOT re-display their local home screen (username form, join code).
 
@@ -218,13 +255,13 @@ When `isEmbedded={true}` and `externalPeerManager` are provided:
 
 ---
 
-## 8. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
+## 10. Embedded Lobby Exit Button -> `onExit` (Not `disconnect`)
 
 In embedded mode, WebRTC connection belongs to Hub (`externalPeerManager`). Sub-game MUST NOT destroy this connection. Exit buttons must invoke `onExit` (return to Hub) and NEVER `game.disconnect` / `peerManager.disconnect`.
 
 ---
 
-## 9. Voice Chat & Spectator Mode
+## 11. Voice Chat & Spectator Mode
 
 For games requiring voice chat or spectator features:
 - **Voice Chat**: Use `useVoiceChat`, `<VoiceChatPanel />`, and `<VoiceBubble />` from `p2play-core/voice`.
@@ -232,7 +269,7 @@ For games requiring voice chat or spectator features:
 
 ---
 
-## 10. Hub Catalog Declaration (`hub-manifest.json`)
+## 12. Hub Catalog Declaration (`hub-manifest.json`)
 
 Games **self-declare** picker metadata. Do **not** put `name` / `desc` in Hub `games.json`.
 
@@ -251,7 +288,11 @@ Games **self-declare** picker metadata. Do **not** put `name` / `desc` in Hub `g
 ```
 
 2. Optionally validate with `defineHubGameManifest` from `p2play-core`.
-3. Hub `games.json` only pins download: `{ "repo": "...", "version": "vX.Y.Z" }`.
-4. `download-games.js` validates the manifest, writes `public/games/catalog.json`, and prunes orphan game folders. Local monorepo: `npm run catalog` (`--catalog-only`) refreshes catalog without re-download.
+3. Hub `games.json` only pins download: `{ "repo": "...", "version": "vX.Y.Z" }` (current pins: games `v0.6.0`, Sheriff `v1.6.0`).
+4. `download-games.js` validates the manifest, writes `public/games/catalog.json`, and prunes orphan game folders.
+
+**Local monorepo tips**
+- `npm run catalog` (`download-games.js --catalog-only`) refreshes catalog without re-download.
+- `npm run dev` **re-downloads** GitHub zips into `public/games/` and wipes local lib copies — use `npx vite` (or catalog-only) when testing locally built `dist` folders copied into `public/games/{key}/`.
 
 Do **not** hardcode per-game avatars, labels, or shell backgrounds in Hub — those belong in `hub-manifest.json`.
