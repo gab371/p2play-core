@@ -1,7 +1,14 @@
 import { Peer } from "peerjs";
 import type { DataConnection } from "peerjs";
 import type { PeerManagerLike } from "./PeerManagerLike";
-import type { ChatMessage, LobbyPlayer, NetworkMessage, PingMessage, PongMessage } from "./types";
+import type {
+  ChatMessage,
+  LobbyPlayer,
+  NetworkMessage,
+  PeerChatProfile,
+  PingMessage,
+  PongMessage,
+} from "./types";
 
 export interface PeerManagerOptions {
   /** PeerJS id prefix to avoid broker collisions (e.g. "royal", "skull", "pool"). */
@@ -26,6 +33,8 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
   public myPeerId: string | null = null;
   public hostPeerId: string | null = null;
   public lobbyPlayers?: LobbyPlayer[];
+  /** Authoritative chat display names keyed by peer id (host-sanitized CHAT). */
+  public peerProfiles: Map<string, PeerChatProfile> = new Map();
 
   public onStateReceived: ((state: TState) => void) | null = null;
   public onChatReceived: ((msg: ChatMessage) => void) | null = null;
@@ -157,15 +166,21 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         return;
       }
       if (msg.type === "CHAT") {
-        this.broadcast(msg, conn.peer);
-        this.onChatReceived?.(msg as ChatMessage);
+        const incoming = msg as ChatMessage;
+        const safe = this.sanitizeChatMessage(conn.peer, incoming);
+        this.broadcast(safe, conn.peer);
+        this.onChatReceived?.(safe);
       } else if (msg.type === "AUDIO_EVENT") {
         this.broadcast(msg);
         const audio = msg as { sfx?: string; intensity?: number };
         if (audio.sfx) this.onAudioReceived?.(audio.sfx, audio.intensity);
-      } else if (msg.type === "VOICE_STATE_UPDATE" || msg.type === "VOICE_MODERATION_ACTION") {
-        this.broadcast(msg, conn.peer);
-        this.onVoiceMessage?.(msg);
+      } else if (msg.type === "VOICE_STATE_UPDATE") {
+        const safe = this.sanitizeVoiceStateUpdate(conn.peer, msg);
+        this.broadcast(safe, conn.peer);
+        this.onVoiceMessage?.(safe);
+      } else if (msg.type === "VOICE_MODERATION_ACTION") {
+        // Only the room host may moderate — drop guest injections.
+        return;
       } else {
         this.hostActionHandler?.(conn.peer, msg);
       }
@@ -185,6 +200,10 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         this.handlePong(key);
         return;
       }
+      // Authoritative room messages only from the host (ignore mesh peer spoofing).
+      const fromHost = conn.peer === this.hostPeerId;
+      if (!fromHost) return;
+
       switch (msg.type) {
         case "STATE_UPDATE": {
           const stateMsg = msg as { state?: TState };
@@ -274,12 +293,74 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     }
   }
 
+  public registerPeerProfile(peerId: string, profile: PeerChatProfile): void {
+    if (!peerId || !profile?.username) return;
+    this.peerProfiles.set(peerId, {
+      username: profile.username,
+      avatar: profile.avatar,
+    });
+  }
+
+  /** Resolve display name from lobby / profiles — never trust a client CHAT.sender. */
+  public resolveChatSender(peerId: string | null | undefined): string {
+    if (!peerId) return "Joueur";
+    const lobby = this.lobbyPlayers?.find(
+      (p) => p.peerId === peerId || peerId.endsWith(p.peerId) || p.peerId.endsWith(peerId),
+    );
+    if (lobby?.username) return lobby.username;
+    const direct = this.peerProfiles.get(peerId);
+    if (direct?.username) return direct.username;
+    for (const [id, profile] of this.peerProfiles) {
+      if (peerId.endsWith(id) || id.endsWith(peerId)) return profile.username;
+    }
+    return `Joueur-${peerId.slice(0, 4)}`;
+  }
+
+  private sanitizeChatMessage(peerId: string, incoming: ChatMessage): ChatMessage {
+    return {
+      type: "CHAT",
+      sender: this.resolveChatSender(peerId),
+      text: typeof incoming.text === "string" ? incoming.text : "",
+      time:
+        typeof incoming.time === "string" && incoming.time
+          ? incoming.time
+          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      senderPeerId: peerId,
+    };
+  }
+
+  private sanitizeVoiceStateUpdate(peerId: string, msg: NetworkMessage): NetworkMessage {
+    const raw = msg as {
+      voiceState?: Record<string, unknown>;
+    };
+    const prev = raw.voiceState && typeof raw.voiceState === "object" ? raw.voiceState : {};
+    return {
+      type: "VOICE_STATE_UPDATE",
+      sender: peerId,
+      voiceState: {
+        ...prev,
+        peerId,
+        username: this.resolveChatSender(peerId),
+      },
+    };
+  }
+
   public sendChat(senderName: string, text: string): void {
+    // Bind own display name on first send if not already known (never used for other peers).
+    if (
+      this.myPeerId &&
+      senderName &&
+      !this.lobbyPlayers?.some((p) => p.peerId === this.myPeerId) &&
+      !this.peerProfiles.has(this.myPeerId)
+    ) {
+      this.registerPeerProfile(this.myPeerId, { username: senderName });
+    }
     const chatMsg: ChatMessage = {
       type: "CHAT",
-      sender: senderName,
+      sender: this.resolveChatSender(this.myPeerId),
       text,
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      senderPeerId: this.myPeerId ?? undefined,
     };
 
     this.onChatReceived?.(chatMsg);

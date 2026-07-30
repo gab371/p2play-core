@@ -21,6 +21,7 @@ export {
   type PresenceController,
   type PresencePeerManager,
 } from "./attachPresenceHandlers";
+export { SessionTokenRegistry } from "./sessionTokens";
 export {
   adaptPlayersEngine,
   createSeatEngine,

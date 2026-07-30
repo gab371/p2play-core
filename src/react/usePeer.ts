@@ -155,6 +155,9 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
           role: "player",
           sessionToken: sessionTokenRef.current,
         });
+        peerManager.sendToHost("REGISTER_SESSION", {
+          sessionToken: sessionTokenRef.current,
+        });
         return id;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Impossible de créer le salon.";
@@ -206,6 +209,9 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
           role: "player",
           sessionToken: sessionTokenRef.current,
         });
+        peerManager.sendToHost("REGISTER_SESSION", {
+          sessionToken: sessionTokenRef.current,
+        });
 
         return { peerId: id, reconnectRequested };
       } catch (err: unknown) {
@@ -217,6 +223,22 @@ export function usePeer<TState = unknown>(options?: UsePeerOptions<TState>) {
     },
     [peerManager, options?.playerName, options?.playerAvatar],
   );
+
+  // Ensure host has our session token once presence handlers are wired.
+  useEffect(() => {
+    if (status !== "CONNECTED" || !myPeerId) return;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const ping = () => {
+      peerManager.sendToHost("REGISTER_SESSION", {
+        sessionToken: sessionTokenRef.current,
+      });
+      tries += 1;
+      if (tries < 6) timer = setTimeout(ping, 250);
+    };
+    ping();
+    return () => clearTimeout(timer);
+  }, [status, myPeerId, peerManager]);
 
   const sendAction = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.4
+
+- Security: clients only accept `STATE_UPDATE` / `CHAT` / voice / custom from the room host (mesh spoof blocked).
+- Security: host rewrites `VOICE_STATE_UPDATE.peerId`; drops guest `VOICE_MODERATION_ACTION`.
+- Security: `REGISTER_SESSION` + sessionToken check on `REQUEST_RECONNECT` (`token_mismatch`).
+
+## 0.6.3
+
+- Chat: host rewrites `CHAT.sender` from peer identity (`lobbyPlayers` / `registerPeerProfile`) — clients can no longer spoof another player's name.
+- `PeerManager.registerPeerProfile` / `resolveChatSender`; optional `senderPeerId` on `ChatMessage`.
+
 ## 0.6.2
 
 - `useFloatingDrag`: delay pointer capture until drag threshold; `onTap` opens the panel on click (fixes mute panel not opening when `draggable`).

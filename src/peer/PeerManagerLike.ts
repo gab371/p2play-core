@@ -1,4 +1,4 @@
-import type { ChatMessage, LobbyPlayer, NetworkMessage } from "./types";
+import type { ChatMessage, LobbyPlayer, NetworkMessage, PeerChatProfile } from "./types";
 
 /**
  * Shared contract for standalone PeerManager and HubPeerManager handover.
@@ -23,6 +23,9 @@ export interface PeerManagerLike<TState = unknown> {
   onVoiceMessage?: ((msg: NetworkMessage) => void) | null;
 
   getPeer?(): any;
+
+  /** Bind a display name to a peer id (host uses this to sanitize CHAT). */
+  registerPeerProfile?(peerId: string, profile: PeerChatProfile): void;
 
   sendToHost(type: string, payload: Record<string, unknown>): void;
   broadcast(message: NetworkMessage, excludePeerId?: string): void;

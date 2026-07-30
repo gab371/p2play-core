@@ -10,6 +10,7 @@ export type {
   PongMessage,
   NetworkMessage,
   LobbyPlayer,
+  PeerChatProfile,
 } from "./peer/types";
 export type { PeerManagerLike } from "./peer/PeerManagerLike";
 export { PeerManager } from "./peer/PeerManager";

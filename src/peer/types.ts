@@ -22,6 +22,13 @@ export interface ChatMessage {
   sender: string;
   text: string;
   time: string;
+  /** Set by the host from the DataConnection peer id (not client-spoofable). */
+  senderPeerId?: string;
+}
+
+export interface PeerChatProfile {
+  username: string;
+  avatar?: string;
 }
 
 export interface AudioEventMessage {

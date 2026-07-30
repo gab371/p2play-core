@@ -39,8 +39,12 @@ export function handleRequestReconnect(opts: {
   engine: GameSeatEngine;
   senderPeerId: string;
   previousPeerId: string;
+  sessionToken?: string;
   profile?: SeatProfile;
   grace: GraceRegistry;
+  /** Verify sessionToken for previousPeerId; reject on mismatch. */
+  verifySessionToken?: (previousPeerId: string, token: string | undefined) => boolean;
+  onSessionTransfer?: (previousPeerId: string, senderPeerId: string) => void;
   send: (msg: Record<string, unknown>) => void;
   onBroadcast: () => void;
   onSeatRemapped?: (oldId: string, newId: string) => void;
@@ -49,8 +53,11 @@ export function handleRequestReconnect(opts: {
     engine,
     senderPeerId,
     previousPeerId,
+    sessionToken,
     profile,
     grace,
+    verifySessionToken,
+    onSessionTransfer,
     send,
     onBroadcast,
     onSeatRemapped,
@@ -60,6 +67,14 @@ export function handleRequestReconnect(opts: {
     send({
       type: "RECONNECT_REJECTED",
       payload: { reason: "grace_expired" },
+    });
+    return "rejected";
+  }
+
+  if (verifySessionToken && !verifySessionToken(previousPeerId, sessionToken)) {
+    send({
+      type: "RECONNECT_REJECTED",
+      payload: { reason: "token_mismatch" },
     });
     return "rejected";
   }
@@ -74,6 +89,7 @@ export function handleRequestReconnect(opts: {
     return "rejected";
   }
 
+  onSessionTransfer?.(previousPeerId, senderPeerId);
   send({
     type: "RECONNECT_ACCEPTED",
     payload: { peerId: senderPeerId, previousPeerId },

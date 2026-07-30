@@ -4,6 +4,7 @@ import {
   handleJoinGameSeat,
   handleRequestReconnect,
 } from "./handlers";
+import { SessionTokenRegistry } from "./sessionTokens";
 import type { GameSeatEngine, JoinSeatResult, SeatProfile } from "./types";
 
 /** Minimal PeerManager surface used by presence (avoids circular imports). */
@@ -59,6 +60,7 @@ export function attachPresenceHandlers(opts: AttachPresenceOptions): PresenceCon
   } = opts;
 
   const grace = new GraceRegistry();
+  const sessionTokens = new SessionTokenRegistry();
   const prevStatus = peerManager.onPeerStatusChange;
   const prevHost = peerManager.hostActionHandler;
 
@@ -78,8 +80,15 @@ export function attachPresenceHandlers(opts: AttachPresenceOptions): PresenceCon
   };
 
   peerManager.hostActionHandler = (senderPeerId, msg) => {
+    if (msg.type === "REGISTER_SESSION") {
+      const token = typeof msg.sessionToken === "string" ? msg.sessionToken : "";
+      sessionTokens.register(senderPeerId, token);
+      return;
+    }
     if (msg.type === "REQUEST_RECONNECT") {
       const previousPeerId = String(msg.previousPeerId ?? "");
+      const sessionToken =
+        typeof msg.sessionToken === "string" ? msg.sessionToken : undefined;
       const profile: SeatProfile = {
         username: typeof msg.username === "string" ? msg.username : undefined,
         avatar: typeof msg.avatar === "string" ? msg.avatar : undefined,
@@ -88,8 +97,13 @@ export function attachPresenceHandlers(opts: AttachPresenceOptions): PresenceCon
         engine: getEngine(),
         senderPeerId,
         previousPeerId,
+        sessionToken,
         profile,
         grace,
+        verifySessionToken: (prevId, token) => sessionTokens.verify(prevId, token),
+        onSessionTransfer: (prevId, nextId) => {
+          sessionTokens.transfer(prevId, nextId);
+        },
         send: (m) => {
           const conn = peerManager.connections.get(senderPeerId);
           if (conn?.open) conn.send(m);
