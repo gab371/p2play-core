@@ -98,9 +98,13 @@ export class VoiceManager {
           if (m.avatar) this.avatar = m.avatar;
         }
         const existing = this.participantStates.get(m.peerId);
+        const trusted =
+          typeof pm.resolveChatSender === "function"
+            ? pm.resolveChatSender(m.peerId)
+            : undefined;
         this.participantStates.set(m.peerId, {
           peerId: m.peerId,
-          username: m.username || existing?.username || "Joueur",
+          username: m.username || existing?.username || trusted || "Joueur",
           avatar: m.avatar || existing?.avatar || (m.peerId === pm.hostPeerId ? "👑" : "👤"),
           selfMuted: existing?.selfMuted ?? true,
           deafened: existing?.deafened ?? false,
@@ -115,9 +119,15 @@ export class VoiceManager {
     for (const peerId of activeMemberIds) {
       if (peerId === "local") continue;
       if (!this.participantStates.has(peerId)) {
+        const trusted =
+          peerId === myId
+            ? this.username
+            : typeof pm.resolveChatSender === "function"
+              ? pm.resolveChatSender(peerId)
+              : undefined;
         this.participantStates.set(peerId, {
           peerId,
-          username: peerId === myId ? this.username : "Joueur",
+          username: trusted || (peerId === myId ? this.username : "Joueur"),
           avatar: peerId === myId ? this.avatar : "👤",
           selfMuted: true,
           deafened: false,

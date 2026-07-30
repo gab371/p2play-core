@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.6
+
+- Fix: guest clients dropped all host `STATE_UPDATE` / chat — `fromHost` compared namespaced `conn.peer` to the short room code; now uses connection map key + safe suffix match (no `endsWith("")` wildcard).
+- Voice: seed participant labels via `resolveChatSender` when lobby username is missing.
+
 ## 0.6.5
 
 - Security: lock display names after first seat — `JOIN_GAME` / `refreshSeatedIdentity` can no longer rename; `REQUEST_RECONNECT` ignores client `username`.

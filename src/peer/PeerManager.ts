@@ -88,6 +88,29 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     return null;
   }
 
+  /** True if this DataConnection is the link to the room host (short code or namespaced id). */
+  private isHostConnection(conn: DataConnection): boolean {
+    if (!this.hostPeerId) return false;
+    const key = this.keyForConnection(conn);
+    if (key === this.hostPeerId) return true;
+    if (conn.peer === this.hostPeerId) return true;
+    // Standalone: map key is short room code, conn.peer is namespaced PeerJS id.
+    const host = this.hostPeerId;
+    if (host.length >= 4 && (conn.peer.endsWith(host) || (key != null && key.length >= 4 && conn.peer.endsWith(key)))) {
+      return true;
+    }
+    return false;
+  }
+
+  /** Match peer ids without treating empty string as a suffix wildcard (`"".endsWith` / `x.endsWith("")`). */
+  private peerIdsMatch(a: string, b: string): boolean {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (a.length >= 4 && b.endsWith(a)) return true;
+    if (b.length >= 4 && a.endsWith(b)) return true;
+    return false;
+  }
+
   private dropConnection(conn: DataConnection): void {
     const key = this.keyForConnection(conn);
     if (key === null) return;
@@ -201,8 +224,8 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
         return;
       }
       // Authoritative room messages only from the host (ignore mesh peer spoofing).
-      const fromHost = conn.peer === this.hostPeerId;
-      if (!fromHost) return;
+      // Must use map key / namespace match — conn.peer is NOT the short room code.
+      if (!this.isHostConnection(conn)) return;
 
       switch (msg.type) {
         case "STATE_UPDATE": {
@@ -309,14 +332,12 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
    */
   public getTrustedUsername(peerId: string | null | undefined): string | undefined {
     if (!peerId) return undefined;
-    const lobby = this.lobbyPlayers?.find(
-      (p) => p.peerId === peerId || peerId.endsWith(p.peerId) || p.peerId.endsWith(peerId),
-    );
+    const lobby = this.lobbyPlayers?.find((p) => this.peerIdsMatch(p.peerId, peerId));
     if (lobby?.username) return lobby.username;
     const direct = this.peerProfiles.get(peerId);
     if (direct?.username) return direct.username;
     for (const [id, profile] of this.peerProfiles) {
-      if (peerId.endsWith(id) || id.endsWith(peerId)) return profile.username;
+      if (this.peerIdsMatch(id, peerId)) return profile.username;
     }
     return undefined;
   }
