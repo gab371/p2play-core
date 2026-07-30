@@ -1,4 +1,5 @@
 import React from "react";
+import { MicOff, HeadphoneOff } from "lucide-react";
 import type { VoiceParticipantState } from "../../peer/types";
 import { Avatar, AvatarFallback, AvatarBadge } from "../../ui/avatar";
 import { cn } from "../../ui/utils";
@@ -26,13 +27,19 @@ export const VoiceChatMinimized: React.FC<VoiceChatMinimizedProps> = ({
   >
     {participants.map((p) => {
       const isMuted = p.selfMuted || p.serverMuted || p.lockMuted;
-      const isSpeaking = p.isSpeaking && !isMuted && !p.deafened;
+      const isDeafened = p.deafened;
+      const isSpeaking = p.isSpeaking && !isMuted && !isDeafened;
       const label = p.username || p.peerId;
+      const status =
+        [
+          isSpeaking ? "En direct" : null,
+          isMuted ? "Micro coupé" : null,
+          isDeafened ? "Casque coupé" : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
       return (
-        <div
-          key={p.peerId}
-          title={`${label}${isSpeaking ? " (En direct)" : isMuted ? " (Micro coupé)" : ""}`}
-        >
+        <div key={p.peerId} title={`${label}${status ? ` (${status})` : ""}`}>
           <Avatar
             size="lg"
             className={cn(
@@ -48,7 +55,23 @@ export const VoiceChatMinimized: React.FC<VoiceChatMinimizedProps> = ({
               {p.avatar || "👤"}
             </AvatarFallback>
             {isMuted ? (
-              <AvatarBadge className="bg-rose-900 text-[11px] ring-rose-500">🔇</AvatarBadge>
+              <AvatarBadge
+                className="bg-rose-900 text-rose-100 ring-rose-500"
+                title="Micro coupé"
+              >
+                <MicOff />
+              </AvatarBadge>
+            ) : null}
+            {isDeafened ? (
+              <AvatarBadge
+                className={cn(
+                  "bg-violet-900 text-violet-100 ring-violet-500",
+                  isMuted && "right-auto left-0",
+                )}
+                title="Casque coupé"
+              >
+                <HeadphoneOff />
+              </AvatarBadge>
             ) : null}
           </Avatar>
         </div>

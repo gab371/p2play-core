@@ -26,6 +26,10 @@ export interface PeerManagerLike<TState = unknown> {
 
   /** Bind a display name to a peer id (host uses this to sanitize CHAT). */
   registerPeerProfile?(peerId: string, profile: PeerChatProfile): void;
+  /** Salon / locked profile name when known (no `Joueur-xxxx` fallback). */
+  getTrustedUsername?(peerId: string | null | undefined): string | undefined;
+  /** Resolve chat label from lobby / profiles — never trust client CHAT.sender. */
+  resolveChatSender?(peerId: string | null | undefined): string;
 
   sendToHost(type: string, payload: Record<string, unknown>): void;
   broadcast(message: NetworkMessage, excludePeerId?: string): void;

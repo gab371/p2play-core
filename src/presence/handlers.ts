@@ -103,20 +103,26 @@ export function handleJoinGameSeat(opts: {
   engine: GameSeatEngine;
   playerId: string;
   payload: { name?: string; avatar?: string };
+  /**
+   * Lobby / host-known display name. When set, wins over `payload.name`
+   * (clients must not pick a chat/board pseudo different from the salon).
+   */
+  trustedName?: string;
   isHostPlayer?: boolean;
   addPlayer: (id: string, name: string, avatar: string, isHost: boolean) => void;
   /** When omitted, non-lobby join falls back to addPlayer (e.g. billard). */
   addSpectator?: (id: string, name: string, avatar: string) => void;
 }): JoinSeatResult {
-  const { engine, playerId, payload, isHostPlayer, addPlayer, addSpectator } = opts;
-  const name = payload.name || "Joueur";
+  const { engine, playerId, payload, trustedName, isHostPlayer, addPlayer, addSpectator } = opts;
+  // Prefer salon identity; payload.name is only a standalone fallback on first seat.
+  const name = (trustedName && trustedName.trim()) || payload.name || "Joueur";
   const avatar = payload.avatar || "👤";
 
   if (engine.findSeatedPlayer) {
     const existing = engine.findSeatedPlayer(playerId);
     if (existing) {
+      // Re-JOIN must not rename — only refresh avatar / clear disconnected.
       engine.refreshSeatedIdentity?.(playerId, {
-        name: payload.name,
         avatar: payload.avatar,
       });
       return "refreshed";

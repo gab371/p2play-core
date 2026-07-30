@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mic, MicOff, Volume2, VolumeX, Ban, Lock, LockOpen, X } from "lucide-react";
+import { Mic, Volume2, VolumeX, Ban, Lock, LockOpen, X } from "lucide-react";
 import type { VoiceParticipantState } from "../../peer/types";
 import { VoiceBubble } from "./VoiceBubble";
 import { Button } from "../../ui/button";
@@ -47,7 +47,10 @@ export const VoiceParticipantRow: React.FC<VoiceParticipantRowProps> = ({
 
       <div className="flex items-center justify-end gap-1.5">
         {showVol ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-2.5 py-1.5">
+          <div
+            data-no-drag
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-2.5 py-1.5"
+          >
             <span
               className={cn(
                 "w-8 shrink-0 text-right font-mono text-[10px]",

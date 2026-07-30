@@ -89,8 +89,8 @@ export function attachPresenceHandlers(opts: AttachPresenceOptions): PresenceCon
       const previousPeerId = String(msg.previousPeerId ?? "");
       const sessionToken =
         typeof msg.sessionToken === "string" ? msg.sessionToken : undefined;
+      // Never take username from the client — seat name stays as first join / lobby.
       const profile: SeatProfile = {
-        username: typeof msg.username === "string" ? msg.username : undefined,
         avatar: typeof msg.avatar === "string" ? msg.avatar : undefined,
       };
       handleRequestReconnect({

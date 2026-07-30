@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.5
+
+- Security: lock display names after first seat — `JOIN_GAME` / `refreshSeatedIdentity` can no longer rename; `REQUEST_RECONNECT` ignores client `username`.
+- Security: `registerPeerProfile` is first-write-wins for username; `sendChat` ignores the client `senderName` argument.
+- New `PeerManager.getTrustedUsername` for Hub-embedded joins (prefer salon pseudo over `payload.name`).
+- Voice: ignore Radix slider pointer events in `useFloatingDrag` (volume slider no longer moves the floating panel).
+- Voice: `MicOff` / `HeadphoneOff` badges on avatars when muted / deafened; deafen button uses `HeadphoneOff`.
+
 ## 0.6.4
 
 - Security: clients only accept `STATE_UPDATE` / `CHAT` / voice / custom from the room host (mesh spoof blocked).

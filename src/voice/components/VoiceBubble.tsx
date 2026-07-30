@@ -1,4 +1,5 @@
 import React from "react";
+import { MicOff, HeadphoneOff } from "lucide-react";
 import type { VoiceParticipantState } from "../../peer/types";
 import { Avatar, AvatarFallback, AvatarBadge } from "../../ui/avatar";
 import { Badge } from "../../ui/badge";
@@ -21,7 +22,8 @@ export const VoiceBubble: React.FC<VoiceBubbleProps> = ({
   className = "",
 }) => {
   const isMuted = participant.selfMuted || participant.serverMuted || participant.lockMuted;
-  const isSpeaking = participant.isSpeaking && !isMuted && !participant.deafened;
+  const isDeafened = participant.deafened;
+  const isSpeaking = participant.isSpeaking && !isMuted && !isDeafened;
   const displayName = participant.username || participant.peerId.slice(0, 8);
 
   return (
@@ -49,10 +51,21 @@ export const VoiceBubble: React.FC<VoiceBubbleProps> = ({
         </AvatarFallback>
         {isMuted ? (
           <AvatarBadge
-            className="size-4 bg-rose-900 text-[9px] ring-1 ring-rose-500"
+            className="size-4 bg-rose-900 text-rose-100 ring-1 ring-rose-500"
             title="Micro coupé"
           >
-            🔇
+            <MicOff className="size-2.5" />
+          </AvatarBadge>
+        ) : null}
+        {isDeafened ? (
+          <AvatarBadge
+            className={cn(
+              "size-4 bg-violet-900 text-violet-100 ring-1 ring-violet-500",
+              isMuted && "right-auto left-0",
+            )}
+            title="Casque coupé"
+          >
+            <HeadphoneOff className="size-2.5" />
           </AvatarBadge>
         ) : null}
       </Avatar>

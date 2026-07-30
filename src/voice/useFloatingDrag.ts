@@ -107,7 +107,12 @@ export function useFloatingDrag({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!enabled || e.button !== 0) return;
       const target = e.target as HTMLElement;
-      if (target.closest("button, a, input, select, textarea, [data-no-drag]")) {
+      // Radix Slider uses role=slider / data-slot=slider (not <input>).
+      if (
+        target.closest(
+          'button, a, input, select, textarea, [role="slider"], [data-slot="slider"], [data-slot="slider-thumb"], [data-no-drag]',
+        )
+      ) {
         return;
       }
       pressActive.current = true;

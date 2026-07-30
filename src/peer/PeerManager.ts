@@ -295,15 +295,20 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
 
   public registerPeerProfile(peerId: string, profile: PeerChatProfile): void {
     if (!peerId || !profile?.username) return;
+    const prev = this.peerProfiles.get(peerId);
+    // First write wins for username — game re-JOIN / chat must not rename.
     this.peerProfiles.set(peerId, {
-      username: profile.username,
-      avatar: profile.avatar,
+      username: prev?.username ?? profile.username,
+      avatar: profile.avatar ?? prev?.avatar,
     });
   }
 
-  /** Resolve display name from lobby / profiles — never trust a client CHAT.sender. */
-  public resolveChatSender(peerId: string | null | undefined): string {
-    if (!peerId) return "Joueur";
+  /**
+   * Known salon / profile name, or `undefined` if the host has no binding yet.
+   * Use this for JOIN_GAME instead of trusting `payload.name` when embedded in the Hub.
+   */
+  public getTrustedUsername(peerId: string | null | undefined): string | undefined {
+    if (!peerId) return undefined;
     const lobby = this.lobbyPlayers?.find(
       (p) => p.peerId === peerId || peerId.endsWith(p.peerId) || p.peerId.endsWith(peerId),
     );
@@ -313,7 +318,12 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     for (const [id, profile] of this.peerProfiles) {
       if (peerId.endsWith(id) || id.endsWith(peerId)) return profile.username;
     }
-    return `Joueur-${peerId.slice(0, 4)}`;
+    return undefined;
+  }
+
+  /** Resolve display name from lobby / profiles — never trust a client CHAT.sender. */
+  public resolveChatSender(peerId: string | null | undefined): string {
+    return this.getTrustedUsername(peerId) ?? (peerId ? `Joueur-${peerId.slice(0, 4)}` : "Joueur");
   }
 
   private sanitizeChatMessage(peerId: string, incoming: ChatMessage): ChatMessage {
@@ -345,16 +355,8 @@ export class PeerManager<TState = unknown> implements PeerManagerLike<TState> {
     };
   }
 
-  public sendChat(senderName: string, text: string): void {
-    // Bind own display name on first send if not already known (never used for other peers).
-    if (
-      this.myPeerId &&
-      senderName &&
-      !this.lobbyPlayers?.some((p) => p.peerId === this.myPeerId) &&
-      !this.peerProfiles.has(this.myPeerId)
-    ) {
-      this.registerPeerProfile(this.myPeerId, { username: senderName });
-    }
+  public sendChat(_senderName: string, text: string): void {
+    // Display name comes only from lobby / registerPeerProfile — ignore client senderName.
     const chatMsg: ChatMessage = {
       type: "CHAT",
       sender: this.resolveChatSender(this.myPeerId),

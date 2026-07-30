@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mic, MicOff, Headphones, ChevronLeft } from "lucide-react";
+import { Mic, MicOff, Headphones, HeadphoneOff, ChevronLeft } from "lucide-react";
 import type { PeerManagerLike } from "../../peer/PeerManagerLike";
 import { useVoiceChat } from "../useVoiceChat";
 import { useFloatingDrag } from "../useFloatingDrag";
@@ -172,7 +172,11 @@ export const VoiceChatPanel: React.FC<VoiceChatPanelProps> = ({
               : "border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10",
           )}
         >
-          <Headphones className="size-3.5" />
+          {deafened ? (
+            <HeadphoneOff className="size-3.5" />
+          ) : (
+            <Headphones className="size-3.5" />
+          )}
           <span>{deafened ? "Sourdine" : "Casque"}</span>
         </Button>
       </div>

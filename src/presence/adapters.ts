@@ -68,7 +68,7 @@ export function createSeatEngine(opts: {
     refreshSeatedIdentity: (peerId, profile) => {
       const p = opts.getPlayers().find((pl) => pl.id === peerId);
       if (!p) return;
-      if (profile.name) p.name = profile.name;
+      // Display name is locked at first seat (anti spoof via JOIN_GAME).
       if (profile.avatar) p.avatar = profile.avatar;
       p.disconnected = false;
     },
