@@ -7,6 +7,13 @@ export interface P2PlaySession {
   savedAt: number;
 }
 
+/** Durable browser identity (multi-day) — not cleared when leaving a room. */
+export interface P2PlayProfile {
+  username: string;
+  avatar: string;
+  updatedAt: number;
+}
+
 export interface RequestReconnectPayload {
   previousPeerId: string;
   username: string;

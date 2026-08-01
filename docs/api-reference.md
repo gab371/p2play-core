@@ -268,7 +268,12 @@ Floating voice activity bubble for player avatars on game boards.
 
 ## 💾 Session Module (`p2play-core/session`)
 
-Persists reconnect identity in `localStorage` (per room code). Used by `usePeer` on host/join and when handling `RECONNECT_ACCEPTED`.
+Two localStorage layers:
+
+| Key | Purpose |
+| :--- | :--- |
+| `p2play:session:{roomCode}` | Mid-game reconnect (`previousPeerId`, `sessionToken`, …). Cleared when leaving the room. |
+| `p2play:profile` | Durable pseudo + avatar (multi-day). **Not** cleared by `clearSession`. |
 
 ```ts
 import {
@@ -276,7 +281,11 @@ import {
   loadSession,
   clearSession,
   createSessionToken,
+  saveProfile,
+  loadProfile,
+  clearProfile,
   type P2PlaySession,
+  type P2PlayProfile,
 } from "p2play-core/session";
 ```
 
@@ -284,10 +293,13 @@ import {
 | :--- | :--- |
 | `saveSession(roomCode, session)` | Store `previousPeerId`, `username`, `avatar`, `role`, `sessionToken`, `savedAt`. |
 | `loadSession(roomCode)` | Returns `P2PlaySession \| null`. |
-| `clearSession(roomCode)` | Removes stored session. |
+| `clearSession(roomCode)` | Removes room session only (profile kept). |
 | `createSessionToken()` | Random token for the local session. |
+| `saveProfile({ username, avatar })` | Upsert durable identity (`updatedAt` set automatically). |
+| `loadProfile()` | Returns `P2PlayProfile \| null`. |
+| `clearProfile()` | Removes durable identity only. |
 
-Types for reconnect payloads (`RequestReconnectPayload`, `ReconnectAcceptedPayload`, …) are also exported from this entry.
+`P2PlayLobby` seeds username/avatar as: room session (if URL code) → durable profile → random. Types for reconnect payloads are also exported from this entry.
 
 ---
 

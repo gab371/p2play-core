@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { clearRoomUrlFromAddressBar, extractRoomCodeFromUrl, subscribeRoomUrlChanges } from "../url";
-import { loadSession } from "../session/helpers";
+import { loadProfile, loadSession, saveProfile } from "../session/helpers";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { cn } from "../ui/utils";
@@ -255,21 +255,38 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
 }) => {
   const roomFromUrl = extractRoomCodeFromUrl();
   const sessionFromUrl = roomFromUrl ? loadSession(roomFromUrl) : null;
+  const profile = loadProfile();
 
   const [username, setUsername] = useState(
     () =>
       sessionFromUrl?.username ||
+      profile?.username ||
       defaultUsername ||
       `Joueur_${Math.floor(Math.random() * 1000)}`,
   );
   const [selectedAvatar, setSelectedAvatar] = useState(
-    () => sessionFromUrl?.avatar || defaultAvatar || avatars[0] || "👑",
+    () =>
+      sessionFromUrl?.avatar ||
+      profile?.avatar ||
+      defaultAvatar ||
+      avatars[0] ||
+      "👑",
   );
   const displayBannerEmoji = bannerFollowsAvatar ? selectedAvatar : bannerEmoji;
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState(() => extractRoomCodeFromUrl() || "");
   const [enableVoice, setEnableVoice] = useState(true);
   const urlInvitationRef = useRef<string | null>(null);
+
+  const persistIdentity = (name: string, avatar: string) => {
+    const clean = name.trim().slice(0, maxUsernameLength);
+    if (clean) saveProfile({ username: clean, avatar });
+  };
+
+  const selectAvatar = (avatar: string) => {
+    setSelectedAvatar(avatar);
+    persistIdentity(username, avatar);
+  };
 
   useEffect(() => {
     const syncFromUrl = (code: string | null) => {
@@ -278,6 +295,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
         setDetectedCode(code);
         setJoinCode(code);
         const session = loadSession(code);
+        // Room session wins for this salon; otherwise keep current / durable profile.
         if (session?.username) setUsername(session.username);
         if (session?.avatar) setSelectedAvatar(session.avatar);
         return;
@@ -305,6 +323,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
       randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
+    persistIdentity(cleanName, selectedAvatar);
     if (onCreateRoom) {
       onCreateRoom(randomCode, cleanName, selectedAvatar, enableVoice);
     } else if (onHost) {
@@ -316,6 +335,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
     const cleanName = username.trim().slice(0, maxUsernameLength);
     const targetCode = (detectedCode || joinCode).trim().toUpperCase();
     if (targetCode && cleanName) {
+      persistIdentity(cleanName, selectedAvatar);
       if (onJoinRoom) {
         onJoinRoom(targetCode, cleanName, selectedAvatar);
       } else if (onJoin) {
@@ -480,6 +500,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
             placeholder={usernamePlaceholder}
             value={username}
             onChange={(e) => setUsername(e.target.value.slice(0, maxUsernameLength))}
+            onBlur={() => persistIdentity(username, selectedAvatar)}
             maxLength={maxUsernameLength}
             disabled={isLoading}
             style={
@@ -505,7 +526,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
 
         {/* Avatar selector */}
         {renderAvatarSelector ? (
-          renderAvatarSelector({ avatars, selectedAvatar, onSelectAvatar: setSelectedAvatar })
+          renderAvatarSelector({ avatars, selectedAvatar, onSelectAvatar: selectAvatar })
         ) : (
           avatars.length > 0 && (
             <div className={classes.avatarWrapper} style={!classes.avatarWrapper ? { textAlign: labelAlign } : {}}>
@@ -558,7 +579,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                       variant="ghost"
                       size="icon"
                       disabled={isLoading}
-                      onClick={() => setSelectedAvatar(av)}
+                      onClick={() => selectAvatar(av)}
                       aria-pressed={selected}
                       className={cn(
                         // Reset shadcn icon button chrome so game/theme styles can win

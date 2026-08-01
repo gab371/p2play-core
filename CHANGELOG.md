@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Session: durable browser profile (`p2play:profile`) via `saveProfile` / `loadProfile` / `clearProfile` — username + avatar survive leaving a room (multi-day).
+- `P2PlayLobby`: seed order is room session → durable profile → random; persists profile on Create/Join, avatar select, and username blur.
+- Room session (`p2play:session:{code}`) unchanged for mid-game reconnect; `clearSession` does not clear the profile.
+
 ## 0.6.6
 
 - Fix: guest clients dropped all host `STATE_UPDATE` / chat — `fromHost` compared namespaced `conn.peer` to the short room code; now uses connection map key + safe suffix match (no `endsWith("")` wildcard).

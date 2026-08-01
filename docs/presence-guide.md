@@ -11,7 +11,7 @@ Requires **`p2play-core` ≥ v0.5.0** (current ecosystem pin: **v0.6.0**).
 | Layer | Responsibility |
 |-------|----------------|
 | Heartbeat (`PeerManager`) | Detect dead DataChannels (PING/PONG) → `onPeerStatusChange('DISCONNECTED')` |
-| Session (`p2play-core/session`) | Persist `previousPeerId` + profile in `localStorage` for F5 / tab reopen |
+| Session (`p2play-core/session`) | Room reconnect (`p2play:session:{code}`) + durable profile (`p2play:profile`) for multi-day pseudo/avatar |
 | Presence (`p2play-core/presence`) | Grace 60s, ACCEPTED/REJECTED, JOIN seat refresh vs spectator |
 | Engine | `markDisconnected` / `remapPlayerId` / `removePlayer` (maps métier) |
 
