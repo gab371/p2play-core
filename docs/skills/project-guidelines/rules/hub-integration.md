@@ -10,11 +10,11 @@ All games in the P2Play ecosystem MUST declare `p2play-core` dependency in `pack
 
 ```json
 "dependencies": {
-  "p2play-core": "github:gab371/p2play-core#v0.6.0"
+  "p2play-core": "github:gab371/p2play-core#v0.6.6"
 }
 ```
 
-Use `file:../p2play-core` only for local monorepo iteration; switch back to the GitHub tag before release. With either pin, keep Vite `resolve.dedupe: ["react", "react-dom"]`.
+Use `file:../p2play-core` only for local monorepo iteration; switch back to the GitHub tag before release. With either pin, keep Vite `resolve.dedupe: ["react", "react-dom"]`. After bumping the pin, force-refresh the lock if needed: `npm install p2play-core@github:gab371/p2play-core#v0.6.6` (plain `npm install` can keep an old resolved commit).
 
 Reference Documentation:
 - 📘 **[`p2play-core` API Reference](https://github.com/gab371/p2play-core/blob/main/docs/api-reference.md)**
@@ -22,6 +22,7 @@ Reference Documentation:
 - 👁️ **[Spectator Guide (`p2play-core/spectator`)](https://github.com/gab371/p2play-core/blob/main/docs/spectator-guide.md)**
 - 🎙️ **[Voice Chat Guide (`p2play-core/voice`)](https://github.com/gab371/p2play-core/blob/main/docs/voice-chat-guide.md)**
 - ♻️ **[Presence & Reconnect Guide (`p2play-core/presence`)](https://github.com/gab371/p2play-core/blob/main/docs/presence-guide.md)**
+- 🔒 **[Network Security & Identity](./network-security.md)** (host-only sync, locked pseudos, `getTrustedUsername`)
 
 ---
 
@@ -242,6 +243,8 @@ import { TextChatPanel, JournalPanel } from "p2play-core/chat";
 
 `scrollbarAccent` drives scrollbar + default journal event color palettes (`journalEventStyles`). Override with `typeClassNames` only when a game needs custom event types.
 
+**Identity:** the host rewrites `CHAT.sender` from lobby / `registerPeerProfile` (`resolveChatSender`). `sendChat(senderName, text)` ignores `senderName` for the wire label (≥ v0.6.5). On `JOIN_GAME`, pass `trustedName: peerManager.getTrustedUsername?.(playerId)`. See [network-security.md](./network-security.md).
+
 ---
 
 ## 9. Direct Local Lobby Bypass + Embedded Pre-Game Configuration Lobby
@@ -288,11 +291,40 @@ Games **self-declare** picker metadata. Do **not** put `name` / `desc` in Hub `g
 ```
 
 2. Optionally validate with `defineHubGameManifest` from `p2play-core`.
-3. Hub `games.json` only pins download: `{ "repo": "...", "version": "vX.Y.Z" }` (current pins: games `v0.6.0`, Sheriff `v1.6.0`).
+3. Hub `games.json` only pins download: `{ "repo": "...", "version": "vX.Y.Z" }`. Keep pins in sync with each game’s `package.json` / release tag (e.g. skull/royal/pool `v0.6.4`, sheriff `v1.6.4`, uno `v0.1.6`).
 4. `download-games.js` validates the manifest, writes `public/games/catalog.json`, and prunes orphan game folders.
 
 **Local monorepo tips**
 - `npm run catalog` (`download-games.js --catalog-only`) refreshes catalog without re-download.
 - `npm run dev` **re-downloads** GitHub zips into `public/games/` and wipes local lib copies — use `npx vite` (or catalog-only) when testing locally built `dist` folders copied into `public/games/{key}/`.
+- After lib builds, copy `dist/index.js` (+ `style.css`) into `public/games/{key}/` so Hub embeds the same bits you just fixed (stale zips hide sync/identity bugs).
 
 Do **not** hardcode per-game avatars, labels, or shell backgrounds in Hub — those belong in `hub-manifest.json`.
+
+---
+
+## 13. Host actions & identity (embedded + standalone)
+
+```ts
+onHostAction: (senderPeerId, rawMsg) => {
+  const msg = rawMsg as NetworkMessage;
+  if (msg.type !== "ACTION") return;
+  const playerId = senderPeerId; // never msg.playerId
+  switch (msg.actionName) {
+    case "JOIN_GAME":
+      handleJoinGameSeat({
+        engine: getSeatEngine(),
+        playerId,
+        payload: { name: msg.payload?.name, avatar: msg.payload?.avatar },
+        trustedName: peerManager.getTrustedUsername?.(playerId),
+        addPlayer: (id, name, avatar, isHost) => engine.addPlayer(id, name, avatar, isHost),
+        addSpectator: (id, name, avatar) => engine.addSpectator(id, name, avatar),
+      });
+      break;
+    // …
+  }
+  broadcastSanitizedStates(engine.state);
+};
+```
+
+When broadcasting, mark both `player.id` and `conn.peer` as sent; do not skip peers with a fuzzy `endsWith` “already known” gate that can drop the only `STATE_UPDATE`.

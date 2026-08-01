@@ -12,9 +12,10 @@ This skill defines the coding standards, architectural patterns, and code struct
 To prevent technical debt, keep components readable, and guarantee seamless game integration inside the P2Play Hub without iFrames, we enforce primary rules:
 1. **File Length Limits**: Files must remain under 300 lines of code. Files exceeding this threshold must be refactored and modularized.
 2. **Decoupled Architecture (Separation of Concerns)**: Absolute separation between Core Domain (pure game logic, rules, types), Network/Infrastructure (`p2play-core` connection protocol), and Application/UI (React components and hooks).
-3. **Unified Network & Capabilities (`p2play-core`)**: All networking, WebRTC peer management, spectator roles, voice chat, session persistence, presence/reconnect, shared UI chrome (`p2play-core/ui`, `SoundToggle`), room-link copy UI (`RoomCodeBadge` / `CopyRoomLinkButton`), and text chat / journal panels (`p2play-core/chat`) MUST rely on the [`p2play-core`](https://github.com/gab371/p2play-core) shared package (≥ **v0.6.0**, pin `github:gab371/p2play-core#v0.6.0`).
+3. **Unified Network & Capabilities (`p2play-core`)**: All networking, WebRTC peer management, spectator roles, voice chat, session persistence, presence/reconnect, shared UI chrome (`p2play-core/ui`, `SoundToggle`), room-link copy UI (`RoomCodeBadge` / `CopyRoomLinkButton`), and text chat / journal panels (`p2play-core/chat`) MUST rely on the [`p2play-core`](https://github.com/gab371/p2play-core) shared package (≥ **v0.6.6**, pin `github:gab371/p2play-core#v0.6.6`).
 4. **Single Responsibility & Composition**: React components and hooks should focus on a single job, delegating layout and state using compound components, custom hooks, and composition patterns.
 5. **Hub Handover & Direct Bypass**: Games integrated into the P2Play Hub must support dual builds (standalone HTML vs lib ES module), synchronous `PeerManagerLike` handover, full-screen canvas mounting, bypass of the local home screen (preserving pre-game config lobbies when applicable), and dual emote packs.
+6. **Host-authoritative identity & sync**: Never trust client `CHAT.sender`, `payload.playerId`, or spoofed `STATE_UPDATE`. Lock salon display names; accept authoritative packets only from the host connection (see [rules/network-security.md](./rules/network-security.md)).
 
 ---
 
@@ -84,6 +85,10 @@ Read the detailed rule markdown files for concrete examples and instructions:
    - [rules/hub-integration.md](./rules/hub-integration.md)
    - Network abstraction with `p2play-core`, mount contract, dual builds, voice, spectator, **presence / reconnect**, lobby bypass, and `process.env` polyfill.
 
+6. **Network Security & Display Identity**
+   - [rules/network-security.md](./rules/network-security.md)
+   - Host-only authoritative messages, `senderPeerId` as actor id, locked salon pseudos, `getTrustedUsername` / `JOIN_GAME`, safe host-connection matching (no namespaced `fromHost` footgun).
+
 ---
 
 ## Common Pitfalls to Avoid
@@ -106,3 +111,9 @@ Read the detailed rule markdown files for concrete examples and instructions:
 - **Destroying the Hub's PeerJS connection from an embedded sub-game**: In embedded mode, the PeerJS connection is owned by the Hub's `externalPeerManager`. Exit buttons must call `onExit` (return to Hub), never `game.disconnect` / `peerManager.disconnect`. See [rules/hub-integration.md §10](./rules/hub-integration.md).
 - **Overwriting `onPeerStatusChange` without chaining**: Voice and presence chain previous handlers; wiping them breaks connectedPeers / voice cleanup.
 - **Relying on `npm run dev` after a local Hub game deploy**: Hub `npm run dev` runs `download-games.js`, which overwrites `public/games/` with GitHub zips. Prefer `npx vite` or `npm run catalog` (`--catalog-only`) when testing locally copied lib builds. See [rules/hub-integration.md §12](./rules/hub-integration.md).
+- **Trusting `CHAT.sender` or `sendChat(senderName, …)` for display names**: Host must rewrite via `resolveChatSender` / lobby profiles. Clients can forge any string on the wire.
+- **Renaming seats via `JOIN_GAME` / reconnect `username`**: Use `trustedName: peerManager.getTrustedUsername?.(playerId)`; re-JOIN must not change `name`.
+- **`conn.peer === hostPeerId` for “from host” checks**: Standalone PeerJS ids are namespaced; use map-key / `isHostConnection` (≥ v0.6.6) or guests drop all `STATE_UPDATE`.
+- **`x.endsWith("")` peer matching**: Empty lobby `peerId` matches every peer — always reject empty ids in fuzzy matchers.
+- **Trusting `payload.playerId` on `ACTION`**: Always use `senderPeerId` from the DataConnection.
+- **Hub E2E that only asserts the host board**: Guest can show 0 players while host smoke stays green — assert guest seats / sync too. Per-game `__testHooks__` suites do not cover PeerJS. See [rules/network-security.md §8](./rules/network-security.md).

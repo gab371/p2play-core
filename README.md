@@ -15,8 +15,9 @@
 - 👁️ **Spectator Module (`p2play-core/spectator`)**: Dynamic Player / Spectator role assignment, host role locking, and secret state scrubbing (`sanitizeForViewer`).
 - 🎨 **UI primitives (`p2play-core/ui`)**: Shared shadcn-style components (`Button`, `Badge`, `Dialog`, …) and `SoundToggle` for Hub + games (apps provide CSS variables + Tailwind content scan).
 - 🎙️ **P2P Voice Chat Module (`p2play-core/voice`)**: Serverless WebRTC audio mesh, 2D/3D spatial audio (Web Audio API), per-peer volume controls, moderation tools (mute/deafen), and UI components (`VoiceChatPanel`, `VoiceBubble`).
-- 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners).
-- 💾 **Session (`p2play-core/session`)**: `localStorage` helpers (`saveSession` / `loadSession`) for reconnect identity after F5.
+- 💬 **Text Chat & Journal (`p2play-core/chat`)**: Shared `TextChatPanel` / `JournalPanel` UI, `useTextChat` hook, Hub-scoped chat history that survives game swaps (`CHAT_HISTORY_SYNC` for late joiners). Host rewrites `CHAT.sender` from salon identity (`resolveChatSender` / `getTrustedUsername`).
+- 🔒 **Host-authoritative sync**: Guests accept `STATE_UPDATE` / chat / voice only from the host connection (map-key aware; fixed in **v0.6.6**). Locked display names on `JOIN_GAME` / reconnect.
+- 💾 **Session (`p2play-core/session`)**: `localStorage` helpers (`saveSession` / `loadSession`) for reconnect identity after F5; `sessionToken` verified on reconnect.
 - ♻️ **Presence & Reconnect (`p2play-core/presence`)**: Shared grace timers, `REQUEST_RECONNECT` protocol, and JOIN_GAME seat policy — games only implement `remapPlayerId` business maps.
 - ❤️ **Heartbeat**: Host/client PING/PONG on PeerManager (and Hub peer manager) to surface silent disconnects.
 - 🔗 **URL Room Sharing**: Shareable room codes / invitation URLs (`?room=` / hash routes) plus UI helpers `CopyRoomLinkButton` and `RoomCodeBadge` (icon-only copy next to the code).
@@ -29,10 +30,10 @@ In your React/Vite game project:
 
 ```bash
 # Via GitHub release tag
-npm install github:gab371/p2play-core#v0.6.0
+npm install github:gab371/p2play-core#v0.6.6
 
 # Or with pnpm
-pnpm add github:gab371/p2play-core#v0.6.0
+pnpm add github:gab371/p2play-core#v0.6.6
 ```
 
 ---

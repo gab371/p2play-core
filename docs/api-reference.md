@@ -1,6 +1,6 @@
 # 📖 `p2play-core` API Reference
 
-This document provides a comprehensive reference for the `p2play-core` package: core P2P networking, lobby, Hub manifest, Spectator, Voice, Session, Presence / Reconnect, chat / journal, and room-link UI (v0.6.0+).
+This document provides a comprehensive reference for the `p2play-core` package: core P2P networking, lobby, Hub manifest, Spectator, Voice, Session, Presence / Reconnect, chat / journal, and room-link UI (**v0.6.6+** recommended).
 
 ---
 
@@ -63,7 +63,7 @@ The primary React hook for managing P2P connections in your components.
 | `hostGame(customRoomId?, profile?)` | `(customRoomId?: string \| null, profile?: PeerProfile) => Promise<string>` | Initializes peer as host; optional profile saved to session. |
 | `joinGame(roomId, profile?)` | `(roomId: string, profile?: PeerProfile) => Promise<string>` | Joins room; may send `REQUEST_RECONNECT` if a session exists for that room. |
 | `sendAction(actionName, payload?)` | `(actionName: string, payload?: any) => void` | Sends game action packet to host. |
-| `sendChat(senderName, text)` | `(senderName: string, text: string) => void` | Broadcasts text chat message to room. |
+| `sendChat(senderName, text)` | `(senderName: string, text: string) => void` | Sends chat text; **display name is resolved on the host** (`resolveChatSender`) — `senderName` is ignored for the wire label (≥ v0.6.5). |
 | `playSfx(sfxName, intensity?)` | `(sfxName: string, intensity?: number) => void` | Triggers P2P sound effect across all players. |
 | `disconnect()` | `() => void` | Closes P2P connections and cleans up instance. |
 | `peerManager` | `PeerManagerLike<TState>` | Underlying peer manager instance. |
@@ -90,14 +90,21 @@ const peerManager = new PeerManager({
 - `broadcast(message: NetworkMessage, excludePeerId?: string): void`: Sends packet to all connected peers.
 - `sendToHost(type: string, payload: Record<string, unknown>): void`: Sends request packet to host.
 - `sendAudio(sfx: string, intensity?: number): void`: Sends SFX trigger event.
-- `sendChat(senderName: string, text: string): void`: Sends text chat message.
+- `sendChat(senderName: string, text: string): void`: Sends text; host/local label from `resolveChatSender` (ignores `senderName` on the wire ≥ v0.6.5).
+- `registerPeerProfile(peerId, { username, avatar? })`: Binds a display name (username **first-write-wins**).
+- `getTrustedUsername(peerId)`: Salon / profile name when known (`undefined` if unbound — no `Joueur-xxxx` fallback).
+- `resolveChatSender(peerId)`: Label for chat/voice sanitize (`getTrustedUsername` or `Joueur-xxxx`).
 - `startHeartbeat()` / `stopHeartbeat()`: PING/PONG liveness (detects silent disconnects → `onPeerStatusChange`).
 - `disconnect(): void`: Closes session.
+
+#### Host-only client ingress (≥ v0.6.4, fixed matching in v0.6.6)
+
+Guests accept `STATE_UPDATE` / `CHAT` / voice / custom **only** from the host DataConnection. Matching uses the connection **map key** (short room code) and a safe suffix check — **not** raw `conn.peer === hostPeerId` (namespaced PeerJS ids). Empty peer ids must not participate in `endsWith` fuzzy match.
 
 #### Callbacks (assignable)
 - `onStateReceived`, `onChatReceived`, `onAudioReceived`
 - `onPeerStatusChange(peerId, 'CONNECTED' | 'DISCONNECTED')` — **chain** when overwriting (voice / presence do this)
-- `hostActionHandler(senderPeerId, msg)` — host processes guest messages (`ACTION`, `REQUEST_RECONNECT`, …)
+- `hostActionHandler(senderPeerId, msg)` — host processes guest messages (`ACTION`, `REQUEST_RECONNECT`, …). **Actor id = `senderPeerId`**, never client `playerId`.
 
 ---
 
@@ -318,9 +325,10 @@ const presence = attachPresenceHandlers({
   graceMs: 60_000,
   onBroadcast: () => broadcastSanitizedStates(engine.state),
   onSeatRemapped: (oldId, newId) => { /* optional voice/chat */ },
-  onHostAction: (_sender, msg) => {
+  onHostAction: (senderPeerId, msg) => {
     if (msg.type !== "ACTION") return;
-    // game switch — JOIN_GAME via handleJoinGameSeat(...)
+    const playerId = senderPeerId; // never trust msg.playerId
+    // JOIN_GAME → handleJoinGameSeat({ …, trustedName: peerManager.getTrustedUsername?.(playerId) })
   },
 });
 
@@ -328,10 +336,12 @@ const presence = attachPresenceHandlers({
 presence.dispose();
 ```
 
+`REQUEST_RECONNECT` validates `sessionToken` (`token_mismatch` if wrong). Client `username` on reconnect is **not** applied to the seat name.
+
 ### Helpers
 
 - `createSeatEngine` / `adaptPlayersEngine` — thin adapters over engine state
-- `handleJoinGameSeat` — refresh if already seated; else lobby `addPlayer` / mid-game `addSpectator`
+- `handleJoinGameSeat` — refresh if already seated (**avatar only**, no rename); else `addPlayer` / `addSpectator` using optional `trustedName` over `payload.name`
 - `remapRecordKey(record, oldId, newId)` — flat map remap for engines
 - `GraceRegistry` — low-level timer registry (usually via `attachPresenceHandlers`)
 - `GameSeatEngine` — TypeScript contract for seat operations

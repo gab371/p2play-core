@@ -121,11 +121,11 @@ Pass a real **profile** (`username` / `avatar`) into `hostGame` / `joinGame` so 
 
 | Message | Direction | Notes |
 |---------|-----------|--------|
-| `REQUEST_RECONNECT` | guest → host | Fields flat on message: `previousPeerId`, `username`, `sessionToken`, … |
+| `REQUEST_RECONNECT` | guest → host | Fields: `previousPeerId`, `sessionToken`, optional `avatar` — **not** used to rename the seat |
 | `RECONNECT_ACCEPTED` | host → guest | `{ type, payload: { peerId, previousPeerId } }` |
-| `RECONNECT_REJECTED` | host → guest | `{ type, payload: { reason } }` — e.g. `grace_expired` |
+| `RECONNECT_REJECTED` | host → guest | `{ type, payload: { reason } }` — e.g. `grace_expired`, `token_mismatch` |
 
-After remap, a subsequent `JOIN_GAME` for the **new** peer id must **refresh identity only** (not treat as late spectator) — that is what `handleJoinGameSeat` does when the player is already seated.
+After remap, a subsequent `JOIN_GAME` for the **new** peer id must **refresh without renaming** (avatar / clear disconnected only) — that is what `handleJoinGameSeat` does when the player is already seated. Prefer `trustedName: peerManager.getTrustedUsername?.(playerId)` on first seat so Hub salon pseudos win over `payload.name`.
 
 ---
 
@@ -134,8 +134,9 @@ After remap, a subsequent `JOIN_GAME` for the **new** peer id must **refresh ide
 1. Engine: mark / isDisconnected / remap / remove (+ `remapRecordKey` for maps).
 2. Host `useGame`: `createSeatEngine` + `attachPresenceHandlers` + `presence.dispose()`.
 3. `JOIN_GAME` → `handleJoinGameSeat`.
-4. Depend on `github:gab371/p2play-core#v0.6.0` (or newer).
+4. Depend on `github:gab371/p2play-core#v0.6.6` (or newer).
 5. Smoke: F5 guest mid-game → disconnected badge → reconnect ≤ 60s → actions OK; lobby disconnect → immediate remove.
+6. Assert guest still sees seats / board after reconnect (not only host UI).
 
 ---
 
