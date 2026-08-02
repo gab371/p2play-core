@@ -19,6 +19,8 @@ export const TextChatPanel: React.FC<TextChatPanelProps> = ({
   className = "",
   style = {},
   maxHeight = "280px",
+  disabled = false,
+  disabledNotice = "Chat textuel désactivé par l'hôte.",
   scrollbarAccent = "zinc",
 }) => {
   const [text, setText] = useState("");
@@ -131,10 +133,11 @@ export const TextChatPanel: React.FC<TextChatPanelProps> = ({
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={placeholder}
-          className="h-8 flex-1 rounded-xl border-current/20 bg-black/30 text-xs"
+          placeholder={disabled ? disabledNotice : placeholder}
+          disabled={disabled}
+          className="h-8 flex-1 rounded-xl border-current/20 bg-black/30 text-xs disabled:opacity-50"
         />
-        <Button type="submit" size="sm" disabled={!text.trim()} className="rounded-xl">
+        <Button type="submit" size="sm" disabled={disabled || !text.trim()} className="rounded-xl">
           Envoyer
         </Button>
       </form>

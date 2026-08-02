@@ -121,6 +121,7 @@ export interface P2PlayLobbyProps {
   error?: string | null;
   maxUsernameLength?: number;
   showVoiceToggle?: boolean;
+  showTextChatToggle?: boolean;
   showCharacterCounter?: boolean;
   labelAlign?: 'center' | 'left';
   defaultUsername?: string;
@@ -134,7 +135,6 @@ export interface P2PlayLobbyProps {
   joinCodeLabel?: string;
   joinCodePlaceholder?: string;
   joinButtonText?: string;
-  compactHostSection?: boolean;
   joinLayout?: 'stacked' | 'side-by-side';
   /** When true, the header emoji follows the currently selected avatar. */
   bannerFollowsAvatar?: boolean;
@@ -144,7 +144,13 @@ export interface P2PlayLobbyProps {
   // MUI / Shadcn Style Customization
   classes?: P2PlayLobbyClasses;
 
-  onCreateRoom?: (roomCode: string, username: string, avatar: string, enableVoice: boolean) => void;
+  onCreateRoom?: (
+    roomCode: string,
+    username: string,
+    avatar: string,
+    enableVoice: boolean,
+    enableTextChat: boolean
+  ) => void;
   onJoinRoom?: (roomCode: string, username: string, avatar: string) => void;
   onHost?: (username: string, avatar: string) => void;
   onJoin?: (username: string, avatar: string, roomCode: string) => void;
@@ -228,6 +234,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   error = null,
   maxUsernameLength = 15,
   showVoiceToggle = true,
+  showTextChatToggle = true,
   showCharacterCounter = true,
   labelAlign = "left",
   defaultUsername,
@@ -239,7 +246,6 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   joinCodeLabel = "Saisir le code du salon",
   joinCodePlaceholder = "CODE DU SALON...",
   joinButtonText = "Rejoindre un salon",
-  compactHostSection = false,
   joinLayout = "stacked",
   bannerFollowsAvatar = false,
   subtitleTransform = "uppercase",
@@ -276,6 +282,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState(() => extractRoomCodeFromUrl() || "");
   const [enableVoice, setEnableVoice] = useState(true);
+  const [enableTextChat, setEnableTextChat] = useState(true);
   const urlInvitationRef = useRef<string | null>(null);
 
   const persistIdentity = (name: string, avatar: string) => {
@@ -325,7 +332,7 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
 
     persistIdentity(cleanName, selectedAvatar);
     if (onCreateRoom) {
-      onCreateRoom(randomCode, cleanName, selectedAvatar, enableVoice);
+      onCreateRoom(randomCode, cleanName, selectedAvatar, enableVoice, enableTextChat);
     } else if (onHost) {
       onHost(cleanName, selectedAvatar);
     }
@@ -736,48 +743,17 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
         ) : (
           <div className={classes.actionGroup} style={!classes.actionGroup ? { display: "flex", flexDirection: "column", gap: "12px" } : {}}>
             {/* Host section */}
-            {compactHostSection ? (
-              <Button
-                onClick={handleCreate}
-                disabled={isCreateDisabled}
-                className={cn(
-                  classes.createButton && LOBBY_BUTTON_RESET,
-                  classes.createButton,
-                  "disabled:opacity-40 disabled:cursor-not-allowed",
-                )}
-                style={
-                  !classes.createButton
-                    ? {
-                        width: "100%",
-                        height: "48px",
-                        borderRadius: "16px",
-                        backgroundColor: activeTheme.primaryColor,
-                        color: "#1c0f08",
-                        fontWeight: 700,
-                        border: "none",
-                        cursor: isCreateDisabled ? "not-allowed" : "pointer",
-                        opacity: isCreateDisabled ? 0.4 : 1,
-                        fontSize: "14px",
-                        boxShadow: "rgba(245, 158, 11, 0.1) 0px 4px 6px -1px, rgba(245, 158, 11, 0.1) 0px 2px 4px -2px",
-                        fontFamily: activeTheme.fontFamily || "inherit",
-                      }
-                    : {}
-                }
-              >
-                {isLoading ? "Création..." : createButtonText}
-              </Button>
-            ) : (
-              <div
-                style={{
-                  padding: "16px",
-                  backgroundColor: "rgba(9, 9, 11, 0.4)",
-                  border: `1px solid ${activeTheme.borderColor}`,
-                  borderRadius: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                }}
-              >
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "rgba(9, 9, 11, 0.4)",
+                border: `1px solid ${activeTheme.borderColor}`,
+                borderRadius: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
                 <p style={{ fontSize: "12px", color: activeTheme.subTextColor, fontWeight: 600, textAlign: "left", margin: 0 }}>
                   Commencer une nouvelle session en tant qu'Hôte
                 </p>
@@ -813,6 +789,37 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                   </div>
                 )}
 
+                {/* Text Chat Toggle Switch */}
+                {showTextChatToggle && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px",
+                      backgroundColor: "#18181b",
+                      border: `1px solid ${activeTheme.borderColor}`,
+                      borderRadius: "12px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: activeTheme.textColor }}>
+                      <span style={{ fontSize: "16px" }}>{enableTextChat ? "💬" : "🚫"}</span>
+                      <div>
+                        <div>Activer le Chat Textuel P2P</div>
+                        <div style={{ fontSize: "10px", fontWeight: 400, color: "#71717a" }}>
+                          {enableTextChat ? "Messagerie écrite active" : "Désactivé (Anti-triche)"}
+                        </div>
+                      </div>
+                    </div>
+                    <LobbyVoiceToggle
+                      enabled={enableTextChat}
+                      onToggle={() => setEnableTextChat(!enableTextChat)}
+                      primaryColor={activeTheme.primaryColor}
+                    />
+                  </div>
+                )}
+
                 <Button
                   onClick={handleCreate}
                   disabled={isCreateDisabled}
@@ -842,7 +849,6 @@ export const P2PlayLobby: React.FC<P2PlayLobbyProps> = ({
                   {isLoading ? "Création..." : createButtonText}
                 </Button>
               </div>
-            )}
 
             {/* Separator Line with "OU" */}
             <div className={classes.divider} style={!classes.divider ? { position: "relative", display: "flex", alignItems: "center", padding: "8px 0" } : {}}>

@@ -34,6 +34,8 @@ export interface TextChatPanelProps {
   className?: string;
   style?: CSSProperties;
   maxHeight?: string;
+  disabled?: boolean;
+  disabledNotice?: string;
   /** Scrollbar accent matched to the game theme (default: zinc). */
   scrollbarAccent?: PanelScrollbarAccent;
 }
